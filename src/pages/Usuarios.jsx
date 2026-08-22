@@ -1,14 +1,31 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import Badge from '../components/UI/Badge';
+import Modal from '../components/UI/Modal';
+import Input from '../components/UI/Input';
+import Select from '../components/UI/Select';
+import { showToast } from '../components/UI/Toast';
+import { Plus, Users, Search, Crown, UtensilsCrossed, Calculator } from 'lucide-react';
+import Confirm from '../components/UI/Confirm';
+import useConfirm from '../hooks/useConfirm';
+import PageTransition from '../components/UI/PageTransition';
+
+const rolConfig = {
+    ADMIN:  { badge: 'warning', icon: Crown,           color: '#f59e0b', label: 'Administrador' },
+    MESERO: { badge: 'primary', icon: UtensilsCrossed, color: 'var(--color-primary-light)', label: 'Mesero' },
+    CAJERO: { badge: 'success', icon: Calculator,      color: 'var(--color-success)', label: 'Cajero' },
+};
 
 export default function Usuarios() {
     const [usuarios, setUsuarios] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [busqueda, setBusqueda] = useState('');
+    const [filtroRol, setFiltroRol] = useState('TODOS');
     const [modalCrear, setModalCrear] = useState(false);
     const [modalEditar, setModalEditar] = useState(null);
+    const { confirm, config } = useConfirm();
     const [nuevoUsuario, setNuevoUsuario] = useState({
         nombre: '', email: '', password: '', rol: 'MESERO'
     });
@@ -16,509 +33,524 @@ export default function Usuarios() {
         nombre: '', email: '', password: '', rol: ''
     });
 
-    const { usuario, logout } = useAuth();
-    const navigate = useNavigate();
-
-    const colorRol = {
-        ADMIN: '#f97316',
-        MESERO: '#3b82f6',
-        CAJERO: '#22c55e'
-    };
-
-    useEffect(() => {
-        cargarUsuarios();
-    }, []);
+    useEffect(() => { cargarUsuarios(); }, []);
 
     const cargarUsuarios = async () => {
         try {
             const res = await axiosClient.get('/usuarios');
             setUsuarios(res.data);
-        } catch (err) {
-            setError('Error al cargar usuarios');
+        } catch {
+            showToast('Error al cargar usuarios', 'error');
         } finally {
             setLoading(false);
         }
     };
 
     const crearUsuario = async () => {
-        if (!nuevoUsuario.nombre || !nuevoUsuario.email ||
-            !nuevoUsuario.password) {
-            setError('Todos los campos son obligatorios');
+        if (!nuevoUsuario.nombre || !nuevoUsuario.email || !nuevoUsuario.password) {
+            showToast('Todos los campos son obligatorios', 'warning');
             return;
         }
         try {
             await axiosClient.post('/auth/register', nuevoUsuario);
+            showToast('Usuario creado correctamente', 'success');
             setModalCrear(false);
             setNuevoUsuario({ nombre: '', email: '', password: '', rol: 'MESERO' });
             cargarUsuarios();
-        } catch (err) {
-            setError('Error al crear usuario — el email puede estar en uso');
+        } catch {
+            showToast('Error — el email puede estar en uso', 'error');
         }
     };
 
     const abrirEditar = (u) => {
-        setEditando({
-            nombre: u.nombre,
-            email: u.email,
-            password: '',
-            rol: u.rol
-        });
+        setEditando({ nombre: u.nombre, email: u.email, password: '', rol: u.rol });
         setModalEditar(u);
     };
 
     const guardarEdicion = async () => {
         try {
             await axiosClient.put(`/usuarios/${modalEditar.id}`, editando);
+            showToast('Usuario actualizado correctamente', 'success');
             setModalEditar(null);
             cargarUsuarios();
-        } catch (err) {
-            setError('Error al actualizar usuario');
+        } catch {
+            showToast('Error al actualizar usuario', 'error');
         }
     };
 
-    const eliminarUsuario = async (id, nombre) => {
-        if (!confirm(`¿Seguro que quieres eliminar a ${nombre}?`)) return;
-        try {
-            await axiosClient.delete(`/usuarios/${id}`);
-            cargarUsuarios();
-        } catch (err) {
-            setError('Error al eliminar usuario');
-        }
-    };
+const eliminarUsuario = async (id, nombre) => {
+    const ok = await confirm({
+        titulo: `¿Eliminar a ${nombre}?`,
+        mensaje: 'Esta acción no se puede deshacer.',
+        variante: 'danger'
+    });
+    if (!ok) return;
+    try {
+        await axiosClient.delete(`/usuarios/${id}`);
+        showToast('Usuario eliminado', 'success');
+        cargarUsuarios();
+    } catch {
+        showToast('Error al eliminar usuario', 'error');
+    }
+};
+
+    const usuariosFiltrados = usuarios
+        .filter(u => filtroRol === 'TODOS' || u.rol === filtroRol)
+        .filter(u => u.nombre.toLowerCase()
+            .includes((busqueda || '').toLowerCase()) ||
+            u.email.toLowerCase()
+            .includes((busqueda || '').toLowerCase()));
+
+    const conteoRol = (rol) => usuarios.filter(u => u.rol === rol).length;
+
+    const rolesOptions = [
+        { value: 'MESERO', label: 'Mesero' },
+        { value: 'CAJERO', label: 'Cajero' },
+        { value: 'ADMIN', label: 'Administrador' },
+    ];
 
     if (loading) return (
-        <div style={styles.loading}>Cargando usuarios...</div>
+        <div style={styles.loading}>
+            <div style={styles.spinner} />
+        </div>
     );
 
     return (
+    <PageTransition>
         <div style={styles.container}>
-
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>MORA</h1>
-                    <p style={styles.subtitle}>Gestión de Usuarios</p>
-                </div>
-                <div style={styles.headerRight}>
-                    <span style={styles.usuarioInfo}>
-                        {usuario?.nombre} · {usuario?.rol}
-                    </span>
-                    <div style={styles.nav}>
-                        <button onClick={() => navigate('/mesas')}
-                            style={styles.navBtn}>Mesas</button>
-                        <button onClick={() => navigate('/pedidos')}
-                            style={styles.navBtn}>Pedidos</button>
-                        <button onClick={() => navigate('/caja')}
-                            style={styles.navBtn}>Caja</button>
-                        <button onClick={() => navigate('/dashboard')}
-                            style={styles.navBtn}>Dashboard</button>
-                        <button onClick={logout}
-                            style={styles.logoutBtn}>Salir</button>
-                    </div>
-                </div>
+            {/* Stats */}
+            <div style={styles.statsRow}>
+                {[
+                    { label: 'Total', count: usuarios.length, color: 'var(--color-primary-light)' },
+                    { label: 'Admins', count: conteoRol('ADMIN'), color: '#f59e0b' },
+                    { label: 'Meseros', count: conteoRol('MESERO'), color: 'var(--color-primary-light)' },
+                    { label: 'Cajeros', count: conteoRol('CAJERO'), color: 'var(--color-success)' },
+                ].map(s => (
+                    <Card key={s.label} style={styles.statCard}>
+                        <p style={{ ...styles.statNum, color: s.color }}>
+                            {s.count}
+                        </p>
+                        <p style={styles.statLabel}>{s.label}</p>
+                    </Card>
+                ))}
             </div>
 
-            {error && (
-                <div style={styles.error}>
-                    {error}
-                    <button onClick={() => setError('')}
-                        style={styles.closeError}>✕</button>
-                </div>
-            )}
-
-            {/* Botón crear */}
-            <button onClick={() => setModalCrear(true)}
-                style={styles.btnCrear}>
-                + Nuevo Usuario
-            </button>
-
-            {/* Lista de usuarios */}
-            <div style={styles.grid}>
-                {usuarios.map(u => (
-                    <div key={u.id} style={styles.card}>
-                        <div style={styles.cardHeader}>
-                            <div style={styles.avatar}>
-                                {u.nombre.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                                <p style={styles.nombre}>{u.nombre}</p>
-                                <p style={styles.email}>{u.email}</p>
-                            </div>
-                        </div>
-
-                        <span style={{
-                            ...styles.badge,
-                            backgroundColor: colorRol[u.rol] + '22',
-                            color: colorRol[u.rol],
-                            border: `1px solid ${colorRol[u.rol]}`
-                        }}>
-                            {u.rol}
-                        </span>
-
-                        <div style={styles.acciones}>
-                            <button
-                                onClick={() => abrirEditar(u)}
-                                style={styles.btnEditar}>
-                                ✏️ Editar
-                            </button>
-                            <button
-                                onClick={() => eliminarUsuario(u.id, u.nombre)}
-                                style={styles.btnEliminar}>
-                                🗑️ Eliminar
-                            </button>
-                        </div>
+            {/* Top bar */}
+            <div style={styles.topBar}>
+                <div style={styles.leftBar}>
+                    {/* Buscador */}
+                    <div style={styles.searchWrap}>
+                        <Search
+                            size={15}
+                            color="var(--text-muted)"
+                            style={styles.searchIcon} />
+                        <input
+                            value={busqueda}
+                            onChange={e => setBusqueda(e.target.value)}
+                            placeholder="Buscar por nombre o email..."
+                            style={styles.searchInput}
+                            onFocus={e => {
+                                e.target.style.borderColor =
+                                    'var(--color-primary)';
+                            }}
+                            onBlur={e => {
+                                e.target.style.borderColor =
+                                    'var(--border-default)';
+                            }}
+                        />
                     </div>
-                ))}
+
+                    {/* Filtro por rol */}
+                    <div style={styles.filtros}>
+                        {['TODOS', 'ADMIN', 'MESERO', 'CAJERO'].map(r => (
+                            <button
+                                key={r}
+                                onClick={() => setFiltroRol(r)}
+                                style={{
+                                    ...styles.filtroBtn,
+                                    ...(filtroRol === r
+                                        ? styles.filtroBtnActive : {})
+                                }}>
+                                {r === 'TODOS' ? 'Todos' : r.charAt(0) +
+                                    r.slice(1).toLowerCase()}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <Button
+                    onClick={() => setModalCrear(true)}
+                    variant="primary"
+                    size="sm">
+                    <Plus size={15} />
+                    Nuevo Usuario
+                </Button>
+            </div>
+
+            {/* Grid de usuarios */}
+            <div style={styles.grid}>
+                {usuariosFiltrados.map(u => {
+                    const cfg = rolConfig[u.rol] || {};
+                    const Icon = cfg.icon || Users;
+                    return (
+                        <Card key={u.id} style={styles.userCard}>
+                            {/* Avatar */}
+                            <div style={styles.userHeader}>
+                                <div style={{
+                                    ...styles.avatar,
+                                    background: cfg.color
+                                        ? `${cfg.color}20`
+                                        : 'var(--bg-overlay)',
+                                    border: `1px solid ${cfg.color || 'var(--border-default)'}30`,
+                                }}>
+                                    <span style={{
+                                        fontSize: 'var(--text-xl)',
+                                        fontWeight: 'var(--font-bold)',
+                                        color: cfg.color ||
+                                            'var(--text-primary)',
+                                    }}>
+                                        {u.nombre.charAt(0).toUpperCase()}
+                                    </span>
+                                </div>
+                                <Badge variant={cfg.badge || 'default'}>
+                                    <Icon size={10} style={{ marginRight: '4px' }} />
+                                    {cfg.label || u.rol}
+                                </Badge>
+                            </div>
+
+                            {/* Info */}
+                            <div style={styles.userInfo}>
+                                <p style={styles.userName}>{u.nombre}</p>
+                                <p style={styles.userEmail}>{u.email}</p>
+                            </div>
+
+                            {/* Acciones */}
+                            <div style={styles.userAcciones}>
+                                <button
+                                    onClick={() => abrirEditar(u)}
+                                    style={styles.editBtn}>
+                                    Editar
+                                </button>
+                                <button
+                                    onClick={() =>
+                                        eliminarUsuario(u.id, u.nombre)}
+                                    style={styles.deleteBtn}>
+                                    Eliminar
+                                </button>
+                            </div>
+                        </Card>
+                    );
+                })}
+
+                {usuariosFiltrados.length === 0 && (
+                    <div style={styles.vacio}>
+                        <Users size={40} color="var(--text-disabled)" />
+                        <p style={{
+                            color: 'var(--text-muted)',
+                            marginTop: '12px'
+                        }}>
+                            No hay usuarios
+                            {busqueda ? ` con "${busqueda}"` : ''}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Modal crear */}
             {modalCrear && (
-                <div style={styles.overlay}>
-                    <div style={styles.modalBox}>
-                        <h2 style={styles.modalTitle}>Nuevo Usuario</h2>
-
-                        {[
-                            { field: 'nombre', label: 'Nombre completo', type: 'text' },
-                            { field: 'email', label: 'Email', type: 'email' },
-                            { field: 'password', label: 'Contraseña', type: 'password' },
-                        ].map(({ field, label, type }) => (
-                            <div key={field} style={styles.field}>
-                                <label style={styles.label}>{label}</label>
-                                <input
-                                    type={type}
-                                    value={nuevoUsuario[field]}
-                                    onChange={e => setNuevoUsuario({
-                                        ...nuevoUsuario,
-                                        [field]: e.target.value
-                                    })}
-                                    style={styles.input}
-                                />
-                            </div>
-                        ))}
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>Rol</label>
-                            <select
-                                value={nuevoUsuario.rol}
-                                onChange={e => setNuevoUsuario({
-                                    ...nuevoUsuario, rol: e.target.value
-                                })}
-                                style={styles.input}>
-                                <option value="MESERO">MESERO</option>
-                                <option value="CAJERO">CAJERO</option>
-                                <option value="ADMIN">ADMIN</option>
-                            </select>
-                        </div>
-
-                        <div style={styles.modalBtns}>
-                            <button
-                                onClick={() => {
-                                    setModalCrear(false);
-                                    setNuevoUsuario({
-                                        nombre: '', email: '',
-                                        password: '', rol: 'MESERO'
-                                    });
-                                }}
-                                style={styles.btnCancelar}>
+                <Modal
+                    title="Nuevo Usuario"
+                    onClose={() => {
+                        setModalCrear(false);
+                        setNuevoUsuario({
+                            nombre: '', email: '',
+                            password: '', rol: 'MESERO'
+                        });
+                    }}
+                    footer={
+                        <>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setModalCrear(false)}>
                                 Cancelar
-                            </button>
-                            <button onClick={crearUsuario}
-                                style={styles.btnGuardar}>
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={crearUsuario}>
                                 Crear Usuario
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            </Button>
+                        </>
+                    }>
+                    <Input
+                        label="Nombre completo"
+                        value={nuevoUsuario.nombre}
+                        onChange={e => setNuevoUsuario({
+                            ...nuevoUsuario, nombre: e.target.value
+                        })}
+                        placeholder="Ej: Carlos Rodríguez"
+                    />
+                    <Input
+                        label="Email"
+                        type="email"
+                        value={nuevoUsuario.email}
+                        onChange={e => setNuevoUsuario({
+                            ...nuevoUsuario, email: e.target.value
+                        })}
+                        placeholder="correo@ejemplo.com"
+                    />
+                    <Input
+                        label="Contraseña"
+                        type="password"
+                        value={nuevoUsuario.password}
+                        onChange={e => setNuevoUsuario({
+                            ...nuevoUsuario, password: e.target.value
+                        })}
+                        placeholder="Mínimo 8 caracteres"
+                    />
+                    <Select
+                        label="Rol"
+                        value={nuevoUsuario.rol}
+                        onChange={e => setNuevoUsuario({
+                            ...nuevoUsuario, rol: e.target.value
+                        })}
+                        options={rolesOptions}
+                    />
+                </Modal>
             )}
 
             {/* Modal editar */}
             {modalEditar && (
-                <div style={styles.overlay}>
-                    <div style={styles.modalBox}>
-                        <h2 style={styles.modalTitle}>
-                            Editar — {modalEditar.nombre}
-                        </h2>
-
-                        {[
-                            { field: 'nombre', label: 'Nombre', type: 'text' },
-                            { field: 'email', label: 'Email', type: 'email' },
-                            { field: 'password', label: 'Nueva contraseña (opcional)', type: 'password' },
-                        ].map(({ field, label, type }) => (
-                            <div key={field} style={styles.field}>
-                                <label style={styles.label}>{label}</label>
-                                <input
-                                    type={type}
-                                    value={editando[field]}
-                                    onChange={e => setEditando({
-                                        ...editando,
-                                        [field]: e.target.value
-                                    })}
-                                    style={styles.input}
-                                    placeholder={field === 'password'
-                                        ? 'Dejar vacío para no cambiar'
-                                        : ''}
-                                />
-                            </div>
-                        ))}
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>Rol</label>
-                            <select
-                                value={editando.rol}
-                                onChange={e => setEditando({
-                                    ...editando, rol: e.target.value
-                                })}
-                                style={styles.input}>
-                                <option value="MESERO">MESERO</option>
-                                <option value="CAJERO">CAJERO</option>
-                                <option value="ADMIN">ADMIN</option>
-                            </select>
-                        </div>
-
-                        <div style={styles.modalBtns}>
-                            <button
-                                onClick={() => setModalEditar(null)}
-                                style={styles.btnCancelar}>
+                <Modal
+                    title={`Editar — ${modalEditar.nombre}`}
+                    onClose={() => setModalEditar(null)}
+                    footer={
+                        <>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setModalEditar(null)}>
                                 Cancelar
-                            </button>
-                            <button onClick={guardarEdicion}
-                                style={styles.btnGuardar}>
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={guardarEdicion}>
                                 Guardar Cambios
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            </Button>
+                        </>
+                    }>
+                    <Input
+                        label="Nombre"
+                        value={editando.nombre}
+                        onChange={e => setEditando({
+                            ...editando, nombre: e.target.value
+                        })}
+                    />
+                    <Input
+                        label="Email"
+                        type="email"
+                        value={editando.email}
+                        onChange={e => setEditando({
+                            ...editando, email: e.target.value
+                        })}
+                    />
+                    <Input
+                        label="Nueva contraseña (opcional)"
+                        type="password"
+                        value={editando.password}
+                        onChange={e => setEditando({
+                            ...editando, password: e.target.value
+                        })}
+                        placeholder="Dejar vacío para no cambiar"
+                    />
+                    <Select
+                        label="Rol"
+                        value={editando.rol}
+                        onChange={e => setEditando({
+                            ...editando, rol: e.target.value
+                        })}
+                        options={rolesOptions}
+                    />
+                </Modal>
             )}
         </div>
-    );
+        {config && <Confirm {...config} />}
+    </PageTransition>
+);
 }
 
 const styles = {
     container: {
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        padding: '24px',
-        fontFamily: 'sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-5)',
     },
     loading: {
-        color: 'white',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '300px',
+    },
+    spinner: {
+        width: '32px',
+        height: '32px',
+        border: '3px solid var(--border-default)',
+        borderTop: '3px solid var(--color-primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+    },
+    statsRow: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: 'var(--space-4)',
+    },
+    statCard: {
         textAlign: 'center',
-        padding: '40px',
+        padding: 'var(--space-4)',
     },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '16px',
-    },
-    title: {
-        color: '#f97316',
-        fontSize: '32px',
-        fontWeight: 'bold',
+    statNum: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
         margin: 0,
-        letterSpacing: '3px',
+        lineHeight: 1,
     },
-    subtitle: {
-        color: '#94a3b8',
+    statLabel: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
         margin: '4px 0 0 0',
-        fontSize: '14px',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
     },
-    headerRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    usuarioInfo: {
-        color: '#94a3b8',
-        fontSize: '14px',
-    },
-    nav: { display: 'flex', gap: '8px' },
-    navBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#cbd5e1',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    logoutBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    error: {
-        backgroundColor: '#7f1d1d',
-        color: '#fca5a5',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
+    topBar: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 'var(--space-3)',
+        flexWrap: 'wrap',
     },
-    closeError: {
-        background: 'none',
-        border: 'none',
-        color: '#fca5a5',
+    leftBar: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        flexWrap: 'wrap',
+        flex: 1,
+    },
+    searchWrap: {
+        position: 'relative',
+        minWidth: '240px',
+    },
+    searchIcon: {
+        position: 'absolute',
+        left: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
+    },
+    searchInput: {
+        width: '100%',
+        padding: '9px 14px 9px 36px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-elevated)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        transition: 'border-color var(--transition-fast)',
+    },
+    filtros: {
+        display: 'flex',
+        gap: 'var(--space-2)',
+    },
+    filtroBtn: {
+        padding: '7px 14px',
+        borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'transparent',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '16px',
+        transition: 'all var(--transition-fast)',
     },
-    btnCrear: {
-        padding: '12px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
+    filtroBtnActive: {
+        background: 'var(--gradient-primary)',
         color: 'white',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        marginBottom: '24px',
+        border: 'none',
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: '16px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+        gap: 'var(--space-4)',
     },
-    card: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px',
+    userCard: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: 'var(--space-4)',
     },
-    cardHeader: {
+    userHeader: {
         display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
     },
     avatar: {
-        width: '44px',
-        height: '44px',
-        borderRadius: '50%',
-        backgroundColor: '#f97316',
-        color: 'white',
+        width: '48px',
+        height: '48px',
+        borderRadius: 'var(--radius-md)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: '18px',
-        fontWeight: 'bold',
-        flexShrink: 0,
     },
-    nombre: {
-        color: '#f1f5f9',
-        fontWeight: '500',
+    userInfo: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        flex: 1,
+    },
+    userName: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
         margin: 0,
-        fontSize: '15px',
     },
-    email: {
-        color: '#64748b',
-        fontSize: '13px',
-        margin: '2px 0 0 0',
+    userEmail: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        margin: 0,
     },
-    badge: {
-        padding: '4px 12px',
-        borderRadius: '20px',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        alignSelf: 'flex-start',
-        letterSpacing: '1px',
-    },
-    acciones: {
+    userAcciones: {
         display: 'flex',
-        gap: '8px',
+        gap: 'var(--space-2)',
+        paddingTop: 'var(--space-3)',
+        borderTop: '1px solid var(--border-subtle)',
     },
-    btnEditar: {
+    editBtn: {
         flex: 1,
-        padding: '8px',
-        borderRadius: '6px',
-        border: '1px solid #334155',
+        padding: '7px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#94a3b8',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '13px',
+        transition: 'all var(--transition-fast)',
     },
-    btnEliminar: {
+    deleteBtn: {
         flex: 1,
-        padding: '8px',
-        borderRadius: '6px',
-        border: '1px solid #7f1d1d',
+        padding: '7px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--color-danger)30',
         backgroundColor: 'transparent',
-        color: '#fca5a5',
+        color: 'var(--color-danger)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '13px',
+        transition: 'all var(--transition-fast)',
     },
-    overlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+    vacio: {
+        gridColumn: '1 / -1',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-    },
-    modalBox: {
-        backgroundColor: '#1e293b',
-        borderRadius: '16px',
-        padding: '32px',
-        width: '100%',
-        maxWidth: '420px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-    },
-    modalTitle: {
-        color: '#f1f5f9',
-        margin: 0,
-        fontSize: '20px',
-    },
-    field: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-    },
-    label: {
-        color: '#cbd5e1',
-        fontSize: '14px',
-    },
-    input: {
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: '#0f172a',
-        color: '#f1f5f9',
-        fontSize: '14px',
-        outline: 'none',
-    },
-    modalBtns: {
-        display: 'flex',
-        gap: '12px',
-        justifyContent: 'flex-end',
-        marginTop: '8px',
-    },
-    btnCancelar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#94a3b8',
-        cursor: 'pointer',
-    },
-    btnGuardar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        cursor: 'pointer',
-        fontWeight: 'bold',
+        padding: 'var(--space-12)',
     },
 };

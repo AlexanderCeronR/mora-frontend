@@ -1,52 +1,61 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import Badge from '../components/UI/Badge';
+import Modal from '../components/UI/Modal';
+import Select from '../components/UI/Select';
+import { showToast } from '../components/UI/Toast';
+import { Plus, ShoppingBag, Clock, ChevronRight } from 'lucide-react';
+import Confirm from '../components/UI/Confirm';
+import useConfirm from '../hooks/useConfirm';
+import PageTransition from '../components/UI/PageTransition';
+
+const estadoConfig = {
+    PENDIENTE:      { badge: 'warning', label: 'Pendiente',      siguiente: 'EN_PREPARACION' },
+    EN_PREPARACION: { badge: 'info',    label: 'En preparación', siguiente: 'LISTO' },
+    LISTO:          { badge: 'primary', label: 'Listo',          siguiente: 'ENTREGADO' },
+    ENTREGADO:      { badge: 'success', label: 'Entregado',      siguiente: null },
+    PAGADO:         { badge: 'default', label: 'Pagado',         siguiente: null },
+};
 
 export default function Pedidos() {
     const [pedidos, setPedidos] = useState([]);
     const [mesas, setMesas] = useState([]);
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [filtro, setFiltro] = useState('TODOS');
     const [modalCrear, setModalCrear] = useState(false);
-    const [filtroEstado, setFiltroEstado] = useState('TODOS');
+    const { confirm, config } = useConfirm();
     const [nuevoPedido, setNuevoPedido] = useState({
-        mesaId: '', meseroId: '', detalles: []
+        mesaId: '', detalles: []
     });
     const [detalleTemp, setDetalleTemp] = useState({
         productoId: '', cantidad: 1, notas: ''
     });
 
-    const { usuario, logout } = useAuth();
     const navigate = useNavigate();
+    const [usuario] = useState(() =>
+        JSON.parse(localStorage.getItem('usuario') || '{}'));
 
-    const estados = ['TODOS', 'PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'PAGADO'];
+    const estados = ['TODOS', 'PENDIENTE', 'EN_PREPARACION',
+        'LISTO', 'ENTREGADO', 'PAGADO'];
 
-    const colorEstado = {
-        PENDIENTE: { bg: '#7c2d12', color: '#fdba74' },
-        EN_PREPARACION: { bg: '#1e3a5f', color: '#93c5fd' },
-        LISTO: { bg: '#14532d', color: '#86efac' },
-        ENTREGADO: { bg: '#1e293b', color: '#94a3b8' },
-        PAGADO: { bg: '#166534', color: '#4ade80' },
-    };
-
-    useEffect(() => {
-        cargarDatos();
-    }, []);
+    useEffect(() => { cargarDatos(); }, []);
 
     const cargarDatos = async () => {
         try {
             const [pedidosRes, mesasRes, productosRes] = await Promise.all([
                 axiosClient.get('/pedidos'),
                 axiosClient.get('/mesas'),
-                axiosClient.get('/productos/disponibles')
+                axiosClient.get('/productos/disponibles'),
             ]);
             setPedidos(pedidosRes.data);
             setMesas(mesasRes.data);
             setProductos(productosRes.data);
-        } catch (err) {
-            setError('Error al cargar datos');
+        } catch {
+            showToast('Error al cargar datos', 'error');
         } finally {
             setLoading(false);
         }
@@ -55,27 +64,36 @@ export default function Pedidos() {
     const cambiarEstado = async (id, estado) => {
         try {
             await axiosClient.patch(`/pedidos/${id}/estado?estado=${estado}`);
+            showToast(`Pedido actualizado a ${estado.replace('_', ' ')}`, 'success');
             cargarDatos();
-        } catch (err) {
-            setError('Error al cambiar estado');
+        } catch {
+            showToast('Error al cambiar estado', 'error');
         }
     };
 
-    const cancelarPedido = async (id) => {
-        if (!confirm('¿Seguro que quieres cancelar este pedido?')) return;
-        try {
-            await axiosClient.delete(`/pedidos/${id}`);
-            cargarDatos();
-        } catch (err) {
-            setError('No se puede cancelar un pedido pagado');
-        }
-    };
+   const cancelarPedido = async (id) => {
+    const ok = await confirm({
+        titulo: '¿Cancelar pedido?',
+        mensaje: 'El pedido se eliminará y la mesa quedará libre.',
+        variante: 'danger'
+    });
+    if (!ok) return;
+    try {
+        await axiosClient.delete(`/pedidos/${id}`);
+        showToast('Pedido cancelado', 'warning');
+        cargarDatos();
+    } catch {
+        showToast('No se puede cancelar un pedido pagado', 'error');
+    }
+};
 
     const agregarDetalle = () => {
-        if (!detalleTemp.productoId) return;
+        if (!detalleTemp.productoId) {
+            showToast('Selecciona un producto', 'warning');
+            return;
+        }
         const producto = productos.find(
-            p => p.id === parseInt(detalleTemp.productoId)
-        );
+            p => p.id === parseInt(detalleTemp.productoId));
         setNuevoPedido({
             ...nuevoPedido,
             detalles: [...nuevoPedido.detalles, {
@@ -83,7 +101,7 @@ export default function Pedidos() {
                 cantidad: parseInt(detalleTemp.cantidad),
                 notas: detalleTemp.notas,
                 nombreProducto: producto?.nombre,
-                precio: producto?.precio
+                precio: producto?.precio,
             }]
         });
         setDetalleTemp({ productoId: '', cantidad: 1, notas: '' });
@@ -98,7 +116,7 @@ export default function Pedidos() {
 
     const crearPedido = async () => {
         if (!nuevoPedido.mesaId || nuevoPedido.detalles.length === 0) {
-            setError('Selecciona una mesa y agrega al menos un producto');
+            showToast('Selecciona una mesa y agrega productos', 'warning');
             return;
         }
         try {
@@ -108,642 +126,577 @@ export default function Pedidos() {
                 detalles: nuevoPedido.detalles.map(d => ({
                     productoId: d.productoId,
                     cantidad: d.cantidad,
-                    notas: d.notas
+                    notas: d.notas,
                 }))
             });
+            showToast('Pedido creado correctamente', 'success');
             setModalCrear(false);
-            setNuevoPedido({ mesaId: '', meseroId: '', detalles: [] });
+            setNuevoPedido({ mesaId: '', detalles: [] });
             cargarDatos();
-        } catch (err) {
-            setError('Error al crear el pedido — verifica que la mesa esté libre');
+        } catch {
+            showToast('Error — verifica que la mesa esté libre', 'error');
         }
     };
 
-    const siguienteEstado = {
-        PENDIENTE: 'EN_PREPARACION',
-        EN_PREPARACION: 'LISTO',
-        LISTO: 'ENTREGADO',
+    const pedidosFiltrados = filtro === 'TODOS'
+        ? pedidos
+        : pedidos.filter(p => p.estado === filtro);
+
+    const conteo = (estado) =>
+        pedidos.filter(p => p.estado === estado).length;
+
+    const totalDetalle = (detalles) =>
+        detalles?.reduce((s, d) => s + (d.subtotal || 0), 0) || 0;
+
+    const tiempoRelativo = (fecha) => {
+        const diff = Date.now() - new Date(fecha).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return 'Ahora';
+        if (mins < 60) return `Hace ${mins}m`;
+        return `Hace ${Math.floor(mins / 60)}h`;
     };
 
-    const pedidosFiltrados = filtroEstado === 'TODOS'
-        ? pedidos
-        : pedidos.filter(p => p.estado === filtroEstado);
-
-    const totalPedido = (detalles) =>
-        detalles?.reduce((sum, d) => sum + d.subtotal, 0) || 0;
-
     if (loading) return (
-        <div style={styles.loading}>Cargando pedidos...</div>
+        <div style={styles.loading}>
+            <div style={styles.spinner} />
+        </div>
     );
 
+
     return (
+    <PageTransition>
         <div style={styles.container}>
-
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>MORA</h1>
-                    <p style={styles.subtitle}>Gestión de Pedidos</p>
-                </div>
-                <div style={styles.headerRight}>
-                    <span style={styles.usuario}>
-                        {usuario?.nombre} · {usuario?.rol}
-                    </span>
-                    <div style={styles.nav}>
-                        <button onClick={() => navigate('/mesas')}
-                            style={styles.navBtn}>Mesas</button>
-                        <button onClick={() => navigate('/menu')}
-                            style={styles.navBtn}>Menú</button>
-                        {(usuario?.rol === 'CAJERO' || usuario?.rol === 'ADMIN') &&
-                        <button onClick={() => navigate('/caja')}
-                            style={styles.navBtn}>Caja</button>}
-                        <button onClick={() => navigate('/dashboard')}
-                            style={styles.navBtn}>Dashboard</button>
-                            {usuario?.rol === 'ADMIN' && (
-    <button
-        onClick={() => navigate('/usuarios')}
-        style={styles.navBtn}
-    >
-        Usuarios
-    </button>
-)}
-                        <button onClick={logout}
-                            style={styles.logoutBtn}>Salir</button>
-                    </div>
-                </div>
-            </div>
-
-            {error && (
-                <div style={styles.error}>
-                    {error}
-                    <button onClick={() => setError('')}
-                        style={styles.closeError}>✕</button>
-                </div>
-            )}
-
-            {/* Filtros */}
-            <div style={styles.filtros}>
-                {estados.map(estado => (
-                    <button
-                        key={estado}
-                        onClick={() => setFiltroEstado(estado)}
-                        style={{
-                            ...styles.filtroBtn,
-                            backgroundColor: filtroEstado === estado
-                                ? '#f97316' : '#1e293b',
-                            color: filtroEstado === estado
-                                ? 'white' : '#94a3b8',
-                        }}>
-                        {estado}
-                        {estado !== 'TODOS' && (
-                            <span style={styles.count}>
-                                {pedidos.filter(p => p.estado === estado).length}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            {/* Botón crear */}
-            {(usuario?.rol === 'ADMIN' || usuario?.rol === 'MESERO') && (
-                <button onClick={() => setModalCrear(true)}
-                    style={styles.btnCrear}>
-                    + Nuevo Pedido
-                </button>
-            )}
-
-            {/* Lista de pedidos */}
-            <div style={styles.grid}>
-                {pedidosFiltrados.map(pedido => (
-                    <div key={pedido.id} style={styles.card}>
-
-                        {/* Header del pedido */}
-                        <div style={styles.cardHeader}>
-                            <div>
-                                <span style={styles.pedidoId}>
-                                    Pedido #{pedido.id}
-                                </span>
-                                <span style={styles.mesa}>
-                                    · Mesa {pedido.mesaNumero}
-                                </span>
-                            </div>
-                            <span style={{
-                                ...styles.badge,
-                                backgroundColor: colorEstado[pedido.estado]?.bg,
-                                color: colorEstado[pedido.estado]?.color,
+             {/* Top bar */}
+            <div style={styles.topBar}>
+                <div style={styles.filtros}>
+                    {estados.map(e => (
+                        <button
+                            key={e}
+                            onClick={() => setFiltro(e)}
+                            style={{
+                                ...styles.filtroBtn,
+                                ...(filtro === e ? styles.filtroBtnActive : {})
                             }}>
-                                {pedido.estado.replace('_', ' ')}
-                            </span>
-                        </div>
+                            {e === 'TODOS' ? 'Todos' : e.replace('_', ' ')}
+                            {e !== 'TODOS' && (
+                                <span style={{
+                                    ...styles.filtroBadge,
+                                    backgroundColor: filtro === e
+                                        ? 'rgba(255,255,255,0.2)'
+                                        : 'var(--bg-overlay)'
+                                }}>
+                                    {conteo(e)}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
 
-                        {/* Mesero y fecha */}
-                        <p style={styles.info}>
-                            👤 {pedido.meseroNombre} ·{' '}
-                            {new Date(pedido.fechaCreacion)
-                                .toLocaleTimeString('es-CO', {
-                                    hour: '2-digit', minute: '2-digit'
-                                })}
-                        </p>
+                {(usuario?.rol === 'ADMIN' || usuario?.rol === 'MESERO') && (
+                    <Button
+                        onClick={() => setModalCrear(true)}
+                        variant="primary"
+                        size="sm">
+                        <Plus size={15} />
+                        Nuevo Pedido
+                    </Button>
+                )}
+            </div>
 
-                        {/* Detalles */}
-                        <div style={styles.detalles}>
-                            {pedido.detalles?.map(d => (
-                                <div key={d.id} style={styles.detalle}>
-                                    <span style={styles.detalleNombre}>
-                                        {d.cantidad}x {d.productoNombre}
+            {/* Grid de pedidos */}
+            <div style={styles.grid}>
+                {pedidosFiltrados.map(pedido => {
+                    const cfg = estadoConfig[pedido.estado];
+                    return (
+                        <Card key={pedido.id} style={styles.pedidoCard}>
+
+                            {/* Header */}
+                            <div style={styles.pedidoHeader}>
+                                <div style={styles.pedidoIdWrap}>
+                                    <ShoppingBag
+                                        size={14}
+                                        color="var(--color-primary-light)" />
+                                    <span style={styles.pedidoId}>
+                                        Pedido #{pedido.id}
                                     </span>
-                                    <span style={styles.detalleSubtotal}>
-                                        ${d.subtotal?.toLocaleString()}
+                                    <span style={styles.mesaTag}>
+                                        Mesa {pedido.mesaNumero}
                                     </span>
                                 </div>
-                            ))}
-                        </div>
+                                <Badge variant={cfg.badge}>
+                                    {cfg.label}
+                                </Badge>
+                            </div>
 
-                        {/* Total */}
-                        <div style={styles.total}>
-                            <span style={styles.totalLabel}>Total</span>
-                            <span style={styles.totalValor}>
-                                ${pedido.total?.toLocaleString()}
-                            </span>
-                        </div>
+                            {/* Meta */}
+                            <div style={styles.pedidoMeta}>
+                                <span style={styles.meseroNombre}>
+                                    {pedido.meseroNombre}
+                                </span>
+                                <div style={styles.tiempoWrap}>
+                                    <Clock size={12}
+                                        color="var(--text-muted)" />
+                                    <span style={styles.tiempo}>
+                                        {tiempoRelativo(pedido.fechaCreacion)}
+                                    </span>
+                                </div>
+                            </div>
 
-                        {/* Acciones */}
-                        <div style={styles.acciones}>
-                            {siguienteEstado[pedido.estado] && (
-                                <button
-                                    onClick={() => cambiarEstado(
-                                        pedido.id,
-                                        siguienteEstado[pedido.estado]
-                                    )}
-                                    style={styles.btnAvanzar}>
-                                    → {siguienteEstado[pedido.estado]
-                                        .replace('_', ' ')}
-                                </button>
-                            )}
-                            {pedido.estado === 'ENTREGADO' && (
-                                <button
-                                    onClick={() => navigate('/caja')}
-                                    style={styles.btnCobrar}>
-                                    Cobrar
-                                </button>
-                            )}
-                            {pedido.estado !== 'PAGADO' && (
-                                <button
-                                    onClick={() => cancelarPedido(pedido.id)}
-                                    style={styles.btnCancelar}>
-                                    Cancelar
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ))}
+                            {/* Detalles */}
+                            <div style={styles.detalles}>
+                                {pedido.detalles?.slice(0, 3).map(d => (
+                                    <div key={d.id} style={styles.detalleRow}>
+                                        <span style={styles.detalleNombre}>
+                                            {d.cantidad}× {d.productoNombre}
+                                        </span>
+                                        <span style={styles.detalleValor}>
+                                            ${d.subtotal?.toLocaleString()}
+                                        </span>
+                                    </div>
+                                ))}
+                                {pedido.detalles?.length > 3 && (
+                                    <span style={styles.masItems}>
+                                        +{pedido.detalles.length - 3} más
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* Total */}
+                            <div style={styles.totalRow}>
+                                <span style={styles.totalLabel}>Total</span>
+                                <span style={styles.totalValor}>
+                                    ${pedido.total?.toLocaleString()}
+                                </span>
+                            </div>
+
+                            {/* Acciones */}
+                            <div style={styles.acciones}>
+                                {cfg.siguiente && (
+                                    <Button
+                                        variant="primary"
+                                        size="sm"
+                                        fullWidth
+                                        onClick={() => cambiarEstado(
+                                            pedido.id, cfg.siguiente
+                                        )}>
+                                        {cfg.siguiente.replace('_', ' ')}
+                                        <ChevronRight size={14} />
+                                    </Button>
+                                )}
+                                {pedido.estado === 'ENTREGADO' && (
+                                    <Button
+                                        variant="accent"
+                                        size="sm"
+                                        fullWidth
+                                        onClick={() => navigate('/caja')}>
+                                        Ir a Caja
+                                    </Button>
+                                )}
+                                {pedido.estado !== 'PAGADO' && (
+                                    <button
+                                        onClick={() => cancelarPedido(pedido.id)}
+                                        style={styles.cancelarBtn}>
+                                        Cancelar
+                                    </button>
+                                )}
+                            </div>
+                        </Card>
+                    );
+                })}
 
                 {pedidosFiltrados.length === 0 && (
-                    <p style={styles.vacio}>
-                        No hay pedidos {filtroEstado !== 'TODOS'
-                            ? `en estado ${filtroEstado}` : ''}
-                    </p>
+                    <div style={styles.vacio}>
+                        <ShoppingBag size={40}
+                            color="var(--text-disabled)" />
+                        <p style={{
+                            color: 'var(--text-muted)',
+                            marginTop: '12px'
+                        }}>
+                            No hay pedidos
+                            {filtro !== 'TODOS'
+                                ? ` en estado ${filtro.replace('_', ' ')}`
+                                : ''}
+                        </p>
+                    </div>
                 )}
             </div>
 
             {/* Modal crear pedido */}
             {modalCrear && (
-                <div style={styles.overlay}>
-                    <div style={styles.modal}>
-                        <h2 style={styles.modalTitle}>Nuevo Pedido</h2>
+                <Modal
+                    title="Nuevo Pedido"
+                    onClose={() => {
+                        setModalCrear(false);
+                        setNuevoPedido({ mesaId: '', detalles: [] });
+                    }}
+                    footer={
+                        <>
+                            <Button
+                                variant="ghost"
+                                onClick={() => {
+                                    setModalCrear(false);
+                                    setNuevoPedido({ mesaId: '', detalles: [] });
+                                }}>
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={crearPedido}>
+                                Crear Pedido
+                            </Button>
+                        </>
+                    }>
 
-                        {/* Selección de mesa */}
-                        <div style={styles.field}>
-                            <label style={styles.label}>Mesa</label>
-                            <select
-                                value={nuevoPedido.mesaId}
-                                onChange={e => setNuevoPedido({
-                                    ...nuevoPedido, mesaId: e.target.value
-                                })}
-                                style={styles.input}>
-                                <option value="">Selecciona una mesa</option>
-                                {mesas.filter(m => m.estado === 'LIBRE')
-                                    .map(m => (
-                                        <option key={m.id} value={m.id}>
-                                            Mesa {m.numero} — {m.capacidad} personas
-                                        </option>
-                                    ))}
-                            </select>
-                        </div>
+                    {/* Mesa */}
+                    <Select
+                        label="Mesa"
+                        value={nuevoPedido.mesaId}
+                        onChange={e => setNuevoPedido({
+                            ...nuevoPedido, mesaId: e.target.value
+                        })}
+                        options={mesas
+                            .filter(m => m.estado === 'LIBRE')
+                            .map(m => ({
+                                value: m.id,
+                                label: `Mesa ${m.numero} — ${m.capacidad} personas`
+                            }))}
+                        placeholder="Selecciona una mesa libre"
+                    />
 
-                        {/* Agregar productos */}
-                        <div style={styles.field}>
-                            <label style={styles.label}>Agregar producto</label>
-                            <select
-                                value={detalleTemp.productoId}
-                                onChange={e => setDetalleTemp({
-                                    ...detalleTemp, productoId: e.target.value
-                                })}
-                                style={styles.input}>
-                                <option value="">Selecciona un producto</option>
-                                {productos.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.nombre} — ${p.precio?.toLocaleString()}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                            <div style={{ ...styles.field, flex: 1 }}>
-                                <label style={styles.label}>Cantidad</label>
+                    {/* Agregar producto */}
+                    <div style={styles.agregarWrap}>
+                        <Select
+                            label="Producto"
+                            value={detalleTemp.productoId}
+                            onChange={e => setDetalleTemp({
+                                ...detalleTemp, productoId: e.target.value
+                            })}
+                            options={productos.map(p => ({
+                                value: p.id,
+                                label: `${p.nombre} — $${p.precio?.toLocaleString()}`
+                            }))}
+                            placeholder="Selecciona un producto"
+                        />
+                        <div style={styles.cantidadNotas}>
+                            <div style={{ flex: '0 0 80px' }}>
+                                <label style={styles.miniLabel}>
+                                    Cantidad
+                                </label>
                                 <input
                                     type="number"
                                     min="1"
                                     value={detalleTemp.cantidad}
                                     onChange={e => setDetalleTemp({
-                                        ...detalleTemp, cantidad: e.target.value
+                                        ...detalleTemp,
+                                        cantidad: e.target.value
                                     })}
-                                    style={styles.input}
+                                    style={styles.miniInput}
                                 />
                             </div>
-                            <div style={{ ...styles.field, flex: 2 }}>
-                                <label style={styles.label}>Notas</label>
+                            <div style={{ flex: 1 }}>
+                                <label style={styles.miniLabel}>
+                                    Notas
+                                </label>
                                 <input
                                     type="text"
-                                    placeholder="sin cebolla..."
                                     value={detalleTemp.notas}
                                     onChange={e => setDetalleTemp({
                                         ...detalleTemp, notas: e.target.value
                                     })}
-                                    style={styles.input}
+                                    placeholder="sin cebolla..."
+                                    style={styles.miniInput}
                                 />
                             </div>
                         </div>
-
-                        <button onClick={agregarDetalle}
-                            style={styles.btnAgregar}>
+                        <button
+                            onClick={agregarDetalle}
+                            style={styles.agregarBtn}>
                             + Agregar al pedido
                         </button>
-
-                        {/* Lista de detalles agregados */}
-                        {nuevoPedido.detalles.length > 0 && (
-                            <div style={styles.detallesList}>
-                                {nuevoPedido.detalles.map((d, i) => (
-                                    <div key={i} style={styles.detalleItem}>
-                                        <span style={{ color: '#cbd5e1' }}>
-                                            {d.cantidad}x {d.nombreProducto}
-                                            {d.notas && ` (${d.notas})`}
-                                        </span>
-                                        <button
-                                            onClick={() => quitarDetalle(i)}
-                                            style={styles.btnQuitar}>✕</button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-
-                        <div style={styles.modalBtns}>
-                            <button
-                                onClick={() => {
-                                    setModalCrear(false);
-                                    setNuevoPedido({
-                                        mesaId: '', meseroId: '', detalles: []
-                                    });
-                                }}
-                                style={styles.btnCancelarModal}>
-                                Cancelar
-                            </button>
-                            <button onClick={crearPedido}
-                                style={styles.btnGuardar}>
-                                Crear Pedido
-                            </button>
-                        </div>
                     </div>
-                </div>
+
+                    {/* Lista de detalles */}
+                    {nuevoPedido.detalles.length > 0 && (
+                        <div style={styles.detallesList}>
+                            <p style={styles.detallesListTitle}>
+                                Productos agregados
+                            </p>
+                            {nuevoPedido.detalles.map((d, i) => (
+                                <div key={i} style={styles.detallesListItem}>
+                                    <span style={{
+                                        color: 'var(--text-secondary)',
+                                        fontSize: 'var(--text-sm)'
+                                    }}>
+                                        {d.cantidad}× {d.nombreProducto}
+                                        {d.notas && (
+                                            <span style={{
+                                                color: 'var(--text-muted)',
+                                                fontSize: 'var(--text-xs)'
+                                            }}>
+                                                {' '}({d.notas})
+                                            </span>
+                                        )}
+                                    </span>
+                                    <button
+                                        onClick={() => quitarDetalle(i)}
+                                        style={styles.quitarBtn}>
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </Modal>
             )}
         </div>
-    );
+        {config && <Confirm {...config} />}
+    </PageTransition>
+);
 }
 
 const styles = {
     container: {
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        padding: '24px',
-        fontFamily: 'sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-5)',
     },
     loading: {
-        color: 'white',
-        textAlign: 'center',
-        padding: '40px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '300px',
     },
-    header: {
+    spinner: {
+        width: '32px',
+        height: '32px',
+        border: '3px solid var(--border-default)',
+        borderTop: '3px solid var(--color-primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+    },
+    topBar: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '24px',
         flexWrap: 'wrap',
-        gap: '16px',
-    },
-    title: {
-        color: '#f97316',
-        fontSize: '32px',
-        fontWeight: 'bold',
-        margin: 0,
-        letterSpacing: '3px',
-    },
-    subtitle: {
-        color: '#94a3b8',
-        margin: '4px 0 0 0',
-        fontSize: '14px',
-    },
-    headerRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    usuario: {
-        color: '#94a3b8',
-        fontSize: '14px',
-    },
-    nav: { display: 'flex', gap: '8px' },
-    navBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#cbd5e1',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    logoutBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    error: {
-        backgroundColor: '#7f1d1d',
-        color: '#fca5a5',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    closeError: {
-        background: 'none',
-        border: 'none',
-        color: '#fca5a5',
-        cursor: 'pointer',
-        fontSize: '16px',
+        gap: 'var(--space-3)',
     },
     filtros: {
         display: 'flex',
-        gap: '8px',
-        marginBottom: '20px',
+        gap: 'var(--space-2)',
         flexWrap: 'wrap',
     },
     filtroBtn: {
-        padding: '8px 14px',
-        borderRadius: '20px',
-        border: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '7px 14px',
+        borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'transparent',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '12px',
-        fontWeight: '500',
+        transition: 'all var(--transition-fast)',
+    },
+    filtroBtnActive: {
+        background: 'var(--gradient-primary)',
+        color: 'white',
+        border: 'none',
+    },
+    filtroBadge: {
+        padding: '1px 7px',
+        borderRadius: 'var(--radius-full)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--font-semibold)',
+    },
+    grid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: 'var(--space-4)',
+    },
+    pedidoCard: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-3)',
+    },
+    pedidoHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    pedidoIdWrap: {
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
     },
-    count: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
-        borderRadius: '10px',
-        padding: '1px 6px',
-        fontSize: '11px',
+    pedidoId: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
     },
-    btnCrear: {
-        padding: '12px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        marginBottom: '24px',
+    mesaTag: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--color-primary-light)',
+        backgroundColor: 'var(--color-primary-10)',
+        padding: '2px 8px',
+        borderRadius: 'var(--radius-full)',
     },
-    grid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '16px',
-    },
-    card: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-    },
-    cardHeader: {
+    pedidoMeta: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
-    pedidoId: {
-        color: '#f1f5f9',
-        fontWeight: 'bold',
-        fontSize: '16px',
+    meseroNombre: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
-    mesa: {
-        color: '#94a3b8',
-        fontSize: '14px',
+    tiempoWrap: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
     },
-    badge: {
-        padding: '4px 10px',
-        borderRadius: '20px',
-        fontSize: '11px',
-        fontWeight: 'bold',
-    },
-    info: {
-        color: '#64748b',
-        fontSize: '13px',
-        margin: 0,
+    tiempo: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
     },
     detalles: {
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
-        borderTop: '1px solid #334155',
-        paddingTop: '8px',
+        borderTop: '1px solid var(--border-subtle)',
+        paddingTop: 'var(--space-3)',
     },
-    detalle: {
+    detalleRow: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     detalleNombre: {
-        color: '#cbd5e1',
-        fontSize: '13px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-secondary)',
     },
-    detalleSubtotal: {
-        color: '#94a3b8',
-        fontSize: '13px',
+    detalleValor: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
-    total: {
+    masItems: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        fontStyle: 'italic',
+    },
+    totalRow: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderTop: '1px solid #334155',
-        paddingTop: '8px',
+        borderTop: '1px solid var(--border-subtle)',
+        paddingTop: 'var(--space-3)',
     },
     totalLabel: {
-        color: '#94a3b8',
-        fontSize: '14px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
     totalValor: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        fontSize: '18px',
+        fontSize: 'var(--text-xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-accent)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
     acciones: {
         display: 'flex',
-        gap: '8px',
-        flexWrap: 'wrap',
+        flexDirection: 'column',
+        gap: 'var(--space-2)',
     },
-    btnAvanzar: {
-        flex: 1,
-        padding: '8px',
-        borderRadius: '6px',
-        border: 'none',
-        backgroundColor: '#1e3a5f',
-        color: '#93c5fd',
-        cursor: 'pointer',
-        fontSize: '12px',
-        fontWeight: 'bold',
-    },
-    btnCobrar: {
-        flex: 1,
-        padding: '8px',
-        borderRadius: '6px',
-        border: 'none',
-        backgroundColor: '#166534',
-        color: '#4ade80',
-        cursor: 'pointer',
-        fontSize: '12px',
-        fontWeight: 'bold',
-    },
-    btnCancelar: {
-        padding: '8px 12px',
-        borderRadius: '6px',
-        border: '1px solid #334155',
+    cancelarBtn: {
+        padding: '7px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#64748b',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '12px',
+        width: '100%',
     },
     vacio: {
-        color: '#64748b',
-        textAlign: 'center',
-        padding: '40px',
         gridColumn: '1 / -1',
-    },
-    overlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
+        padding: 'var(--space-12)',
     },
-    modal: {
-        backgroundColor: '#1e293b',
-        borderRadius: '16px',
-        padding: '32px',
+    agregarWrap: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-3)',
+        padding: 'var(--space-4)',
+        backgroundColor: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+    },
+    cantidadNotas: {
+        display: 'flex',
+        gap: 'var(--space-3)',
+    },
+    miniLabel: {
+        display: 'block',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        color: 'var(--text-secondary)',
+        marginBottom: '6px',
+    },
+    miniInput: {
         width: '100%',
-        maxWidth: '500px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-    },
-    modalTitle: {
-        color: '#f1f5f9',
-        margin: 0,
-        fontSize: '20px',
-    },
-    field: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-    },
-    label: {
-        color: '#cbd5e1',
-        fontSize: '14px',
-    },
-    input: {
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: '#0f172a',
-        color: '#f1f5f9',
-        fontSize: '14px',
+        padding: '9px 12px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-surface)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         outline: 'none',
     },
-    btnAgregar: {
-        padding: '10px',
-        borderRadius: '8px',
-        border: '1px dashed #334155',
+    agregarBtn: {
+        padding: '9px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px dashed var(--border-strong)',
         backgroundColor: 'transparent',
-        color: '#94a3b8',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '14px',
+        transition: 'all var(--transition-fast)',
     },
     detallesList: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
-        backgroundColor: '#0f172a',
-        borderRadius: '8px',
-        padding: '12px',
+        gap: 'var(--space-2)',
+        padding: 'var(--space-3)',
+        backgroundColor: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-md)',
     },
-    detalleItem: {
+    detallesListTitle: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+        margin: 0,
+        marginBottom: 'var(--space-1)',
+    },
+    detallesListItem: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        fontSize: '13px',
     },
-    btnQuitar: {
+    quitarBtn: {
         background: 'none',
         border: 'none',
-        color: '#64748b',
+        color: 'var(--text-muted)',
         cursor: 'pointer',
         fontSize: '14px',
-    },
-    modalBtns: {
-        display: 'flex',
-        gap: '12px',
-        justifyContent: 'flex-end',
-        marginTop: '8px',
-    },
-    btnCancelarModal: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#94a3b8',
-        cursor: 'pointer',
-    },
-    btnGuardar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        cursor: 'pointer',
-        fontWeight: 'bold',
+        padding: '2px 6px',
     },
 };

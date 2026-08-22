@@ -1,24 +1,38 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import { showToast } from '../components/UI/Toast';
+import {
+    TrendingUp, ShoppingBag, CreditCard,
+    Receipt, Send, Sparkles
+} from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    Tooltip, PieChart, Pie, Cell, ResponsiveContainer, Legend
+    Tooltip, PieChart, Pie, Cell,
+    ResponsiveContainer, Legend
 } from 'recharts';
+import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
+import PageTransition from '../components/UI/PageTransition';
 
-const COLORES = ['#f97316', '#3b82f6', '#22c55e', '#a855f7', '#ef4444'];
+const COLORES = ['#443199', '#792CA2', '#C13383', '#E05454', '#f59e0b'];
+
+const TooltipEstilo = {
+    contentStyle: {
+        backgroundColor: 'var(--bg-elevated)',
+        border: '1px solid var(--border-default)',
+        borderRadius: '10px',
+        color: 'var(--text-primary)',
+        fontSize: '13px',
+    }
+};
 
 export default function Dashboard() {
     const [datos, setDatos] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
     const [preguntaIA, setPreguntaIA] = useState('');
     const [respuestaIA, setRespuestaIA] = useState('');
     const [loadingIA, setLoadingIA] = useState(false);
-
-    const { usuario, logout } = useAuth();
-    const navigate = useNavigate();
 
     useEffect(() => {
         cargarDatos();
@@ -28,14 +42,13 @@ export default function Dashboard() {
         try {
             const res = await axiosClient.get('/reportes/resumen');
             setDatos(res.data);
-        } catch (err) {
-            setError('Error al cargar el dashboard');
+        } catch {
+            showToast('Error al cargar el dashboard', 'error');
         } finally {
             setLoading(false);
         }
     };
 
-    // Prepara datos para gráficas
     const datosProductos = datos
         ? Object.entries(datos.productosMasVendidos || {})
             .sort((a, b) => b[1] - a[1])
@@ -56,154 +69,162 @@ export default function Dashboard() {
             .map(([metodo, cantidad]) => ({ metodo, cantidad }))
         : [];
 
-    // Pregunta a la IA
     const preguntarIA = async () => {
-    if (!preguntaIA.trim() || !datos) return;
-    setLoadingIA(true);
-    setRespuestaIA('');
+        if (!preguntaIA.trim() || !datos) return;
+        setLoadingIA(true);
+        setRespuestaIA('');
 
-    try {
-        const contexto = `
-            Eres el asistente de análisis del restaurante MORA.
-            Datos actuales:
-            - Total ventas: $${datos.totalVentas?.toLocaleString()}
-            - Total pedidos: ${datos.totalPedidos}
-            - Total pagos: ${datos.totalPagos}
-            - Ventas por método de pago: ${JSON.stringify(datos.porMetodoPago)}
-            - Productos más vendidos: ${JSON.stringify(datos.productosMasVendidos)}
-            - Ventas por categoría: ${JSON.stringify(datos.porCategoria)}
-            Responde en español, conciso, máximo 3 oraciones.
-        `;
+        try {
+            const contexto = `
+                Eres el asistente de análisis del restaurante MORA.
+                Datos actuales:
+                - Total ventas: $${datos.totalVentas?.toLocaleString()}
+                - Total pedidos: ${datos.totalPedidos}
+                - Total pagos: ${datos.totalPagos}
+                - Ventas por método de pago: ${JSON.stringify(datos.porMetodoPago)}
+                - Productos más vendidos: ${JSON.stringify(datos.productosMasVendidos)}
+                - Ventas por categoría: ${JSON.stringify(datos.porCategoria)}
+                Responde en español, conciso, máximo 3 oraciones.
+            `;
 
-        const response = await axiosClient.post('/ia/preguntar', {
-            pregunta: preguntaIA,
-            contexto
-        });
+            const response = await axiosClient.post('/ia/preguntar', {
+                pregunta: preguntaIA,
+                contexto
+            });
 
-        const contenido = response.data?.content;
-        const texto = contenido?.[0]?.text || 'Sin respuesta';
-        setRespuestaIA(texto);
+            const texto = response.data?.content?.[0]?.text || 'Sin respuesta';
+            setRespuestaIA(texto);
+            showToast('Respuesta generada', 'success');
+        } catch {
+            setRespuestaIA('Error al conectar con la IA');
+            showToast('Error al conectar con la IA', 'error');
+        } finally {
+            setLoadingIA(false);
+        }
+    };
 
-    } catch (err) {
-        setRespuestaIA('Error al conectar con la IA');
-    } finally {
-        setLoadingIA(false);
-    }
-};
+    const kpis = [
+        {
+            label: 'Total Ventas',
+            valor: `$${datos?.totalVentas?.toLocaleString() || 0}`,
+            icon: TrendingUp,
+            color: '#443199',
+            gradient: 'var(--gradient-primary)',
+        },
+        {
+            label: 'Total Pedidos',
+            valor: datos?.totalPedidos || 0,
+            icon: ShoppingBag,
+            color: '#792CA2',
+            gradient: 'var(--gradient-accent)',
+        },
+        {
+            label: 'Pagos Registrados',
+            valor: datos?.totalPagos || 0,
+            icon: CreditCard,
+            color: '#C13383',
+            gradient: 'linear-gradient(135deg, #C13383, #E05454)',
+        },
+        {
+            label: 'Ticket Promedio',
+            valor: `$${datos?.totalPedidos > 0
+                ? Math.round(datos?.totalVentas / datos?.totalPedidos)
+                    .toLocaleString()
+                : 0}`,
+            icon: Receipt,
+            color: '#E05454',
+            gradient: 'linear-gradient(135deg, #E05454, #f59e0b)',
+        },
+    ];
+
+    const sugerencias = [
+        '¿Cuál es el producto más vendido?',
+        '¿Qué categoría genera más ingresos?',
+        '¿Cómo van las ventas?',
+        '¿Qué método de pago prefieren los clientes?',
+    ];
 
     if (loading) return (
-        <div style={styles.loading}>Cargando dashboard...</div>
-    );
+    <div style={styles.container}>
+        <div style={styles.kpiGrid}>
+            {[1,2,3,4].map(i => (
+                <SkeletonCard key={i} lines={1} />
+            ))}
+        </div>
+        <div style={styles.graficasGrid}>
+            {[1,2,3].map(i => (
+                <SkeletonCard key={i} lines={4} />
+            ))}
+        </div>
+    </div>
+);
 
-    return (
+return (
+    <PageTransition>
         <div style={styles.container}>
-
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>MORA</h1>
-                    <p style={styles.subtitle}>Dashboard & Analytics</p>
-                </div>
-                <div style={styles.headerRight}>
-                    <span style={styles.usuario}>
-                        {usuario?.nombre} · {usuario?.rol}
-                    </span>
-                    <div style={styles.nav}>
-                        <button onClick={() => navigate('/mesas')}
-                            style={styles.navBtn}>Mesas</button>
-                        <button onClick={() => navigate('/pedidos')}
-                            style={styles.navBtn}>Pedidos</button>
-                        <button onClick={() => navigate('/caja')}
-                            style={styles.navBtn}>Caja</button>
-                        <button onClick={() => navigate('/dashboard')}
-                        style={styles.navBtn}>Dashboard</button>
-                        {usuario?.rol === 'ADMIN' && (
-    <button
-        onClick={() => navigate('/usuarios')}
-        style={styles.navBtn}
-    >
-        Usuarios
-    </button>
-)}
-                        <button onClick={logout}
-                            style={styles.logoutBtn}>Salir</button>
-                    </div>
-                </div>
-            </div>
-
-            {error && (
-                <div style={styles.error}>{error}</div>
-            )}
-
             {/* KPIs */}
-            <div style={styles.kpis}>
-                <div style={styles.kpi}>
-                    <span style={styles.kpiValor}>
-                        ${datos?.totalVentas?.toLocaleString() || 0}
-                    </span>
-                    <span style={styles.kpiLabel}>Total Ventas</span>
-                </div>
-                <div style={styles.kpi}>
-                    <span style={{
-                        ...styles.kpiValor, color: '#3b82f6'
-                    }}>
-                        {datos?.totalPedidos || 0}
-                    </span>
-                    <span style={styles.kpiLabel}>Total Pedidos</span>
-                </div>
-                <div style={styles.kpi}>
-                    <span style={{
-                        ...styles.kpiValor, color: '#a855f7'
-                    }}>
-                        {datos?.totalPagos || 0}
-                    </span>
-                    <span style={styles.kpiLabel}>Pagos Registrados</span>
-                </div>
-                <div style={styles.kpi}>
-                    <span style={{
-                        ...styles.kpiValor, color: '#22c55e'
-                    }}>
-                        ${datos?.totalPedidos > 0
-                            ? Math.round(datos?.totalVentas / datos?.totalPedidos)
-                                .toLocaleString()
-                            : 0}
-                    </span>
-                    <span style={styles.kpiLabel}>Ticket Promedio</span>
-                </div>
+            <div style={styles.kpiGrid}>
+                {kpis.map((kpi, i) => {
+                    const Icon = kpi.icon;
+                    return (
+                        <Card key={i} style={styles.kpiCard}>
+                            <div style={styles.kpiTop}>
+                                <div style={{
+                                    ...styles.kpiIcon,
+                                    background: kpi.gradient,
+                                }}>
+                                    <Icon size={18} color="white" />
+                                </div>
+                                <span style={styles.kpiLabel}>
+                                    {kpi.label}
+                                </span>
+                            </div>
+                            <p style={{
+                                ...styles.kpiValor,
+                                color: kpi.color,
+                            }}>
+                                {kpi.valor}
+                            </p>
+                        </Card>
+                    );
+                })}
             </div>
 
             {/* Gráficas */}
-            <div style={styles.graficas}>
+            <div style={styles.graficasGrid}>
 
                 {/* Productos más vendidos */}
-                <div style={styles.graficaCard}>
+                <Card style={styles.graficaCard}>
                     <h3 style={styles.graficaTitulo}>
                         🏆 Productos más vendidos
                     </h3>
                     <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={datosProductos}>
-                            <CartesianGrid strokeDasharray="3 3"
-                                stroke="#334155" />
-                            <XAxis dataKey="nombre"
-                                tick={{ fill: '#94a3b8', fontSize: 11 }}
-                                interval={0}
-                                angle={-20}
+                        <BarChart data={datosProductos}
+                            margin={{ top: 5, right: 10, left: -20, bottom: 40 }}>
+                            <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="var(--border-subtle)" />
+                            <XAxis
+                                dataKey="nombre"
+                                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                                angle={-25}
                                 textAnchor="end" />
-                            <YAxis tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#1e293b',
-                                    border: '1px solid #334155',
-                                    color: '#f1f5f9'
-                                }} />
-                            <Bar dataKey="cantidad" fill="#f97316"
-                                radius={[4, 4, 0, 0]} />
+                            <YAxis
+                                tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                            <Tooltip {...TooltipEstilo} />
+                            <Bar dataKey="cantidad" radius={[6, 6, 0, 0]}>
+                                {datosProductos.map((_, i) => (
+                                    <Cell
+                                        key={i}
+                                        fill={COLORES[i % COLORES.length]} />
+                                ))}
+                            </Bar>
                         </BarChart>
                     </ResponsiveContainer>
-                </div>
+                </Card>
 
                 {/* Ventas por categoría */}
-                <div style={styles.graficaCard}>
+                <Card style={styles.graficaCard}>
                     <h3 style={styles.graficaTitulo}>
                         📊 Ventas por categoría
                     </h3>
@@ -214,31 +235,26 @@ export default function Dashboard() {
                                 dataKey="total"
                                 nameKey="categoria"
                                 cx="50%"
-                                cy="50%"
-                                outerRadius={80}
+                                cy="45%"
+                                outerRadius={75}
                                 label={({ categoria, percent }) =>
                                     `${categoria} ${(percent * 100).toFixed(0)}%`
                                 }
-                                labelLine={{ stroke: '#94a3b8' }}>
+                                labelLine={{ stroke: 'var(--text-muted)' }}>
                                 {datosCategorias.map((_, i) => (
                                     <Cell key={i}
                                         fill={COLORES[i % COLORES.length]} />
                                 ))}
                             </Pie>
                             <Tooltip
-                                formatter={(value) =>
-                                    `$${value.toLocaleString()}`}
-                                contentStyle={{
-                                    backgroundColor: '#1e293b',
-                                    border: '1px solid #334155',
-                                    color: '#f1f5f9'
-                                }} />
+                                formatter={v => `$${v.toLocaleString()}`}
+                                {...TooltipEstilo} />
                         </PieChart>
                     </ResponsiveContainer>
-                </div>
+                </Card>
 
                 {/* Métodos de pago */}
-                <div style={styles.graficaCard}>
+                <Card style={styles.graficaCard}>
                     <h3 style={styles.graficaTitulo}>
                         💳 Métodos de pago
                     </h3>
@@ -249,262 +265,267 @@ export default function Dashboard() {
                                 dataKey="cantidad"
                                 nameKey="metodo"
                                 cx="50%"
-                                cy="50%"
-                                outerRadius={80}>
+                                cy="45%"
+                                outerRadius={75}>
                                 {datosMetodos.map((_, i) => (
                                     <Cell key={i}
                                         fill={COLORES[i % COLORES.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip
-                                contentStyle={{
-                                    backgroundColor: '#1e293b',
-                                    border: '1px solid #334155',
-                                    color: '#f1f5f9'
-                                }} />
+                            <Tooltip {...TooltipEstilo} />
                             <Legend
-                                formatter={(value) => (
-                                    <span style={{ color: '#94a3b8' }}>
-                                        {value}
+                                formatter={v => (
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                                        {v}
                                     </span>
                                 )} />
                         </PieChart>
                     </ResponsiveContainer>
-                </div>
+                </Card>
             </div>
 
-            {/* Panel de IA */}
-            <div style={styles.iaPanel}>
-                <h3 style={styles.iaTitulo}>
-                    🤖 Asistente IA — Análisis de MORA
-                </h3>
-                <p style={styles.iaSubtitulo}>
-                    Pregúntale al asistente sobre las ventas y el rendimiento
-                    del restaurante
-                </p>
+            {/* Panel IA */}
+            <Card style={styles.iaCard}>
+                <div style={styles.iaHeader}>
+                    <div style={styles.iaIconWrap}>
+                        <Sparkles size={18} color="white" />
+                    </div>
+                    <div>
+                        <h3 style={styles.iaTitulo}>
+                            Asistente IA — Análisis de MORA
+                        </h3>
+                        <p style={styles.iaSub}>
+                            Pregúntale al asistente sobre ventas y rendimiento
+                        </p>
+                    </div>
+                </div>
 
-                {/* Sugerencias rápidas */}
+                {/* Sugerencias */}
                 <div style={styles.sugerencias}>
-                    {[
-                        '¿Cuál es el producto más vendido?',
-                        '¿Qué categoría genera más ingresos?',
-                        '¿Cómo van las ventas?',
-                        '¿Qué método de pago prefieren los clientes?'
-                    ].map(s => (
+                    {sugerencias.map(s => (
                         <button
                             key={s}
                             onClick={() => setPreguntaIA(s)}
-                            style={styles.sugerenciaBtn}>
+                            style={styles.sugerenciaBtn}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.borderColor =
+                                    'var(--color-primary)';
+                                e.currentTarget.style.color =
+                                    'var(--text-primary)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.borderColor =
+                                    'var(--border-default)';
+                                e.currentTarget.style.color =
+                                    'var(--text-muted)';
+                            }}>
                             {s}
                         </button>
                     ))}
                 </div>
 
-                <div style={styles.iaInput}>
+                {/* Input */}
+                <div style={styles.iaInputRow}>
                     <input
-                        type="text"
                         value={preguntaIA}
                         onChange={e => setPreguntaIA(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && preguntarIA()}
                         placeholder="Escribe tu pregunta sobre las ventas..."
-                        style={styles.input}
+                        style={styles.iaInput}
+                        onFocus={e => {
+                            e.target.style.borderColor = 'var(--color-primary)';
+                            e.target.style.boxShadow =
+                                '0 0 0 3px rgba(68,49,153,0.15)';
+                        }}
+                        onBlur={e => {
+                            e.target.style.borderColor = 'var(--border-default)';
+                            e.target.style.boxShadow = 'none';
+                        }}
                     />
-                    <button
+                    <Button
                         onClick={preguntarIA}
                         disabled={loadingIA}
-                        style={styles.btnPreguntar}>
-                        {loadingIA ? '...' : 'Preguntar'}
-                    </button>
+                        variant="primary">
+                        <Send size={15} />
+                        {loadingIA ? 'Analizando...' : 'Preguntar'}
+                    </Button>
                 </div>
 
+                {/* Respuesta */}
                 {respuestaIA && (
                     <div style={styles.respuesta}>
-                        <span style={styles.respuestaIcono}>🤖</span>
+                        <div style={styles.respuestaIcon}>
+                            <Sparkles size={14} color="white" />
+                        </div>
                         <p style={styles.respuestaTexto}>{respuestaIA}</p>
                     </div>
                 )}
-            </div>
+            </Card>
         </div>
-    );
+    </PageTransition>
+);
+
+
 }
 
 const styles = {
     container: {
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        padding: '24px',
-        fontFamily: 'sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-6)',
     },
     loading: {
-        color: 'white',
-        textAlign: 'center',
-        padding: '40px',
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '16px',
-    },
-    title: {
-        color: '#f97316',
-        fontSize: '32px',
-        fontWeight: 'bold',
-        margin: 0,
-        letterSpacing: '3px',
-    },
-    subtitle: {
-        color: '#94a3b8',
-        margin: '4px 0 0 0',
-        fontSize: '14px',
-    },
-    headerRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    usuario: {
-        color: '#94a3b8',
-        fontSize: '14px',
-    },
-    nav: { display: 'flex', gap: '8px' },
-    navBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#cbd5e1',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    logoutBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    error: {
-        backgroundColor: '#7f1d1d',
-        color: '#fca5a5',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-    },
-    kpis: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px',
-    },
-    kpi: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px 24px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '400px',
     },
-    kpiValor: {
-        color: '#22c55e',
-        fontSize: '26px',
-        fontWeight: 'bold',
+    loadingSpinner: {
+        width: '36px',
+        height: '36px',
+        border: '3px solid var(--border-default)',
+        borderTop: '3px solid var(--color-primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+    },
+    kpiGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: 'var(--space-4)',
+    },
+    kpiCard: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-3)',
+    },
+    kpiTop: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+    },
+    kpiIcon: {
+        width: '36px',
+        height: '36px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
     },
     kpiLabel: {
-        color: '#64748b',
-        fontSize: '12px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        fontWeight: 'var(--font-medium)',
     },
-    graficas: {
+    kpiValor: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
+        margin: 0,
+        lineHeight: 1,
+    },
+    graficasGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-        gap: '16px',
-        marginBottom: '24px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gap: 'var(--space-4)',
     },
     graficaCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px',
-    },
-    graficaTitulo: {
-        color: '#f1f5f9',
-        fontSize: '15px',
-        margin: '0 0 16px 0',
-    },
-    iaPanel: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '24px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: 'var(--space-4)',
     },
-    iaTitulo: {
-        color: '#f1f5f9',
-        fontSize: '18px',
+    graficaTitulo: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
         margin: 0,
     },
-    iaSubtitulo: {
-        color: '#64748b',
-        fontSize: '13px',
+    iaCard: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-5)',
+    },
+    iaHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-4)',
+    },
+    iaIconWrap: {
+        width: '40px',
+        height: '40px',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--gradient-accent)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        boxShadow: 'var(--shadow-glow-accent)',
+    },
+    iaTitulo: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
+        margin: 0,
+    },
+    iaSub: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
         margin: 0,
     },
     sugerencias: {
         display: 'flex',
-        gap: '8px',
+        gap: 'var(--space-2)',
         flexWrap: 'wrap',
     },
     sugerenciaBtn: {
-        padding: '8px 14px',
-        borderRadius: '20px',
-        border: '1px solid #334155',
+        padding: '6px 14px',
+        borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#94a3b8',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '12px',
+        transition: 'all var(--transition-fast)',
+    },
+    iaInputRow: {
+        display: 'flex',
+        gap: 'var(--space-3)',
     },
     iaInput: {
-        display: 'flex',
-        gap: '8px',
-    },
-    input: {
         flex: 1,
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: '#0f172a',
-        color: '#f1f5f9',
-        fontSize: '14px',
+        padding: '10px 14px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-elevated)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-base)',
+        fontFamily: 'var(--font-sans)',
         outline: 'none',
-    },
-    btnPreguntar: {
-        padding: '12px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '14px',
+        transition: 'all var(--transition-fast)',
     },
     respuesta: {
-        backgroundColor: '#0f172a',
-        borderRadius: '10px',
-        padding: '16px',
         display: 'flex',
-        gap: '12px',
+        gap: 'var(--space-3)',
         alignItems: 'flex-start',
+        padding: 'var(--space-4)',
+        backgroundColor: 'var(--color-primary-10)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--color-primary-10)',
     },
-    respuestaIcono: {
-        fontSize: '24px',
+    respuestaIcon: {
+        width: '28px',
+        height: '28px',
+        borderRadius: 'var(--radius-sm)',
+        background: 'var(--gradient-accent)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
     },
     respuestaTexto: {
-        color: '#cbd5e1',
-        fontSize: '14px',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
         lineHeight: '1.6',
         margin: 0,
     },

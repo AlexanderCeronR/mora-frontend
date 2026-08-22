@@ -1,56 +1,67 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import Badge from '../components/UI/Badge';
+import Modal from '../components/UI/Modal';
+import { showToast } from '../components/UI/Toast';
+import {
+    CreditCard, Banknote, Smartphone,
+    TrendingUp, Receipt, CheckCircle
+} from 'lucide-react';
+import PageTransition from '../components/UI/PageTransition';
+
+const metodoConfig = {
+    EFECTIVO:      { icon: Banknote,    label: 'Efectivo',      color: 'var(--color-success)' },
+    TARJETA:       { icon: CreditCard,  label: 'Tarjeta',       color: 'var(--color-primary-light)' },
+    TRANSFERENCIA: { icon: Smartphone,  label: 'Transferencia', color: 'var(--color-accent-light)' },
+};
 
 export default function Caja() {
     const [pedidos, setPedidos] = useState([]);
     const [pagos, setPagos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [vista, setVista] = useState('COBRAR');
     const [modalPago, setModalPago] = useState(null);
     const [metodoPago, setMetodoPago] = useState('EFECTIVO');
-    const [vista, setVista] = useState('COBRAR');
-    // COBRAR = pedidos entregados listos para cobrar
-    // HISTORIAL = pagos registrados
+    const [pagandoId, setPagandoId] = useState(null);
 
-    const { usuario, logout } = useAuth();
-    const navigate = useNavigate();
-
-    useEffect(() => {
-        cargarDatos();
-    }, []);
+    useEffect(() => { cargarDatos(); }, []);
 
     const cargarDatos = async () => {
         try {
             const [pedidosRes, pagosRes] = await Promise.all([
                 axiosClient.get('/pedidos/estado/ENTREGADO'),
-                axiosClient.get('/pagos')
+                axiosClient.get('/pagos'),
             ]);
             setPedidos(pedidosRes.data);
             setPagos(pagosRes.data);
-        } catch (err) {
-            setError('Error al cargar datos');
+        } catch {
+            showToast('Error al cargar datos', 'error');
         } finally {
             setLoading(false);
         }
     };
 
     const registrarPago = async () => {
+        if (!modalPago) return;
+        setPagandoId(modalPago.id);
         try {
             await axiosClient.post('/pagos', {
                 pedidoId: modalPago.id,
-                metodoPago
+                metodoPago,
             });
+            showToast('Pago registrado correctamente', 'success');
             setModalPago(null);
             setMetodoPago('EFECTIVO');
             cargarDatos();
-        } catch (err) {
-            setError('Error al registrar el pago');
+        } catch {
+            showToast('Error al registrar el pago', 'error');
+        } finally {
+            setPagandoId(null);
         }
     };
 
-    // Calcula el total vendido hoy
     const totalHoy = pagos
         .filter(p => {
             const fecha = new Date(p.fechaPago);
@@ -61,143 +72,163 @@ export default function Caja() {
 
     const totalGeneral = pagos.reduce((sum, p) => sum + p.total, 0);
 
-    const iconoMetodo = {
-        EFECTIVO: '💵',
-        TARJETA: '💳',
-        TRANSFERENCIA: '📱'
-    };
+    const pagosPorMetodo = Object.entries(
+        pagos.reduce((acc, p) => {
+            acc[p.metodoPago] = (acc[p.metodoPago] || 0) + p.total;
+            return acc;
+        }, {})
+    );
 
     if (loading) return (
-        <div style={styles.loading}>Cargando caja...</div>
+        <div style={styles.loading}>
+            <div style={styles.spinner} />
+        </div>
     );
 
     return (
+    <PageTransition>
         <div style={styles.container}>
-
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>MORA</h1>
-                    <p style={styles.subtitle}>Caja</p>
-                </div>
-                <div style={styles.headerRight}>
-                    <span style={styles.usuario}>
-                        {usuario?.nombre} · {usuario?.rol}
-                    </span>
-                    <div style={styles.nav}>
-                        <button onClick={() => navigate('/mesas')}
-                            style={styles.navBtn}>Mesas</button>
-                        <button onClick={() => navigate('/menu')}
-                            style={styles.navBtn}>Menú</button>
-                        <button onClick={() => navigate('/pedidos')}
-                            style={styles.navBtn}>Pedidos</button>
-                        <button onClick={() => navigate('/dashboard')}
-                            style={styles.navBtn}>Dashboard</button>
-                            {usuario?.rol === 'ADMIN' && (
-    <button
-        onClick={() => navigate('/usuarios')}
-        style={styles.navBtn}
-    >
-        Usuarios
-    </button>
-)}
-                        <button onClick={logout}
-                            style={styles.logoutBtn}>Salir</button>
+            {/* KPIs */}
+            <div style={styles.kpiGrid}>
+                <Card style={styles.kpiCard}>
+                    <div style={styles.kpiIcon}
+                        className="gradient-primary">
+                        <TrendingUp size={18} color="white" />
                     </div>
-                </div>
+                    <div>
+                        <p style={styles.kpiValor}>
+                            ${totalHoy.toLocaleString()}
+                        </p>
+                        <p style={styles.kpiLabel}>Ventas hoy</p>
+                    </div>
+                </Card>
+                <Card style={styles.kpiCard}>
+                    <div style={{
+                        ...styles.kpiIcon,
+                        background: 'var(--gradient-accent)'
+                    }}>
+                        <Receipt size={18} color="white" />
+                    </div>
+                    <div>
+                        <p style={styles.kpiValor}>
+                            ${totalGeneral.toLocaleString()}
+                        </p>
+                        <p style={styles.kpiLabel}>Total general</p>
+                    </div>
+                </Card>
+                <Card style={styles.kpiCard}>
+                    <div style={{
+                        ...styles.kpiIcon,
+                        background: 'linear-gradient(135deg, #C13383, #E05454)'
+                    }}>
+                        <CheckCircle size={18} color="white" />
+                    </div>
+                    <div>
+                        <p style={styles.kpiValor}>{pagos.length}</p>
+                        <p style={styles.kpiLabel}>Pagos registrados</p>
+                    </div>
+                </Card>
+                <Card style={styles.kpiCard}>
+                    <div style={{
+                        ...styles.kpiIcon,
+                        background: 'linear-gradient(135deg, #E05454, #f59e0b)'
+                    }}>
+                        <CreditCard size={18} color="white" />
+                    </div>
+                    <div>
+                        <p style={{
+                            ...styles.kpiValor,
+                            color: pedidos.length > 0
+                                ? 'var(--color-danger)'
+                                : 'var(--color-success)'
+                        }}>
+                            {pedidos.length}
+                        </p>
+                        <p style={styles.kpiLabel}>Por cobrar</p>
+                    </div>
+                </Card>
             </div>
 
-            {error && (
-                <div style={styles.error}>
-                    {error}
-                    <button onClick={() => setError('')}
-                        style={styles.closeError}>✕</button>
+            {/* Ventas por método */}
+            {pagosPorMetodo.length > 0 && (
+                <div style={styles.metodosRow}>
+                    {pagosPorMetodo.map(([metodo, total]) => {
+                        const cfg = metodoConfig[metodo] || {};
+                        const Icon = cfg.icon || CreditCard;
+                        return (
+                            <Card key={metodo} style={styles.metodoCard}>
+                                <Icon size={16} color={cfg.color} />
+                                <div>
+                                    <p style={{
+                                        ...styles.metodoTotal,
+                                        color: cfg.color
+                                    }}>
+                                        ${total.toLocaleString()}
+                                    </p>
+                                    <p style={styles.metodoLabel}>
+                                        {cfg.label || metodo}
+                                    </p>
+                                </div>
+                            </Card>
+                        );
+                    })}
                 </div>
             )}
 
-            {/* Resumen de ventas */}
-            <div style={styles.resumen}>
-                <div style={styles.statCard}>
-                    <span style={styles.statValor}>
-                        ${totalHoy.toLocaleString()}
-                    </span>
-                    <span style={styles.statLabel}>Ventas hoy</span>
-                </div>
-                <div style={styles.statCard}>
-                    <span style={styles.statValor}>
-                        ${totalGeneral.toLocaleString()}
-                    </span>
-                    <span style={styles.statLabel}>Total general</span>
-                </div>
-                <div style={styles.statCard}>
-                    <span style={styles.statValor}>
-                        {pagos.length}
-                    </span>
-                    <span style={styles.statLabel}>Pagos registrados</span>
-                </div>
-                <div style={styles.statCard}>
-                    <span style={{
-                        ...styles.statValor, color: '#f97316'
-                    }}>
-                        {pedidos.length}
-                    </span>
-                    <span style={styles.statLabel}>Por cobrar</span>
-                </div>
-            </div>
-
             {/* Tabs */}
             <div style={styles.tabs}>
-                <button
-                    onClick={() => setVista('COBRAR')}
-                    style={{
-                        ...styles.tab,
-                        borderBottom: vista === 'COBRAR'
-                            ? '2px solid #f97316' : '2px solid transparent',
-                        color: vista === 'COBRAR' ? '#f97316' : '#94a3b8'
-                    }}>
-                    Por Cobrar ({pedidos.length})
-                </button>
-                <button
-                    onClick={() => setVista('HISTORIAL')}
-                    style={{
-                        ...styles.tab,
-                        borderBottom: vista === 'HISTORIAL'
-                            ? '2px solid #f97316' : '2px solid transparent',
-                        color: vista === 'HISTORIAL' ? '#f97316' : '#94a3b8'
-                    }}>
-                    Historial de Pagos ({pagos.length})
-                </button>
+                {['COBRAR', 'HISTORIAL'].map(t => (
+                    <button
+                        key={t}
+                        onClick={() => setVista(t)}
+                        style={{
+                            ...styles.tab,
+                            ...(vista === t ? styles.tabActive : {})
+                        }}>
+                        {t === 'COBRAR'
+                            ? `Por Cobrar (${pedidos.length})`
+                            : `Historial (${pagos.length})`}
+                    </button>
+                ))}
             </div>
 
             {/* Vista Por Cobrar */}
             {vista === 'COBRAR' && (
                 <div style={styles.grid}>
                     {pedidos.length === 0 ? (
-                        <p style={styles.vacio}>
-                            No hay pedidos pendientes de cobro
-                        </p>
+                        <div style={styles.vacio}>
+                            <CheckCircle
+                                size={40}
+                                color="var(--color-success)" />
+                            <p style={{
+                                color: 'var(--text-muted)',
+                                marginTop: '12px'
+                            }}>
+                                No hay pedidos pendientes de cobro
+                            </p>
+                        </div>
                     ) : (
                         pedidos.map(pedido => (
-                            <div key={pedido.id} style={styles.card}>
-                                <div style={styles.cardHeader}>
+                            <Card key={pedido.id} style={styles.pedidoCard}>
+                                <div style={styles.pedidoHeader}>
                                     <span style={styles.pedidoId}>
                                         Pedido #{pedido.id}
                                     </span>
-                                    <span style={styles.mesa}>
+                                    <Badge variant="accent">
                                         Mesa {pedido.mesaNumero}
-                                    </span>
+                                    </Badge>
                                 </div>
 
-                                <p style={styles.info}>
+                                <p style={styles.meseroNombre}>
                                     👤 {pedido.meseroNombre}
                                 </p>
 
-                                {/* Detalles del pedido */}
                                 <div style={styles.detalles}>
                                     {pedido.detalles?.map(d => (
-                                        <div key={d.id} style={styles.detalle}>
+                                        <div key={d.id}
+                                            style={styles.detalleRow}>
                                             <span style={styles.detalleNombre}>
-                                                {d.cantidad}x {d.productoNombre}
+                                                {d.cantidad}× {d.productoNombre}
                                             </span>
                                             <span style={styles.detalleValor}>
                                                 ${d.subtotal?.toLocaleString()}
@@ -206,7 +237,6 @@ export default function Caja() {
                                     ))}
                                 </div>
 
-                                {/* Total */}
                                 <div style={styles.totalRow}>
                                     <span style={styles.totalLabel}>Total</span>
                                     <span style={styles.totalValor}>
@@ -214,12 +244,14 @@ export default function Caja() {
                                     </span>
                                 </div>
 
-                                <button
-                                    onClick={() => setModalPago(pedido)}
-                                    style={styles.btnCobrar}>
-                                    💳 Cobrar
-                                </button>
-                            </div>
+                                <Button
+                                    variant="accent"
+                                    fullWidth
+                                    onClick={() => setModalPago(pedido)}>
+                                    <CreditCard size={15} />
+                                    Cobrar
+                                </Button>
+                            </Card>
                         ))
                     )}
                 </div>
@@ -229,333 +261,349 @@ export default function Caja() {
             {vista === 'HISTORIAL' && (
                 <div style={styles.historial}>
                     {pagos.length === 0 ? (
-                        <p style={styles.vacio}>No hay pagos registrados</p>
+                        <div style={styles.vacio}>
+                            <p style={{ color: 'var(--text-muted)' }}>
+                                No hay pagos registrados
+                            </p>
+                        </div>
                     ) : (
-                        [...pagos].reverse().map(pago => (
-                            <div key={pago.id} style={styles.pagoItem}>
-                                <div style={styles.pagoLeft}>
-                                    <span style={styles.pagoIcono}>
-                                        {iconoMetodo[pago.metodoPago]}
-                                    </span>
-                                    <div>
-                                        <p style={styles.pagoId}>
-                                            Pago #{pago.id} — Pedido #{pago.pedidoId}
-                                        </p>
-                                        <p style={styles.pagoFecha}>
-                                            Mesa {pago.mesaNumero} ·{' '}
-                                            {new Date(pago.fechaPago)
-                                                .toLocaleString('es-CO', {
-                                                    day: '2-digit',
-                                                    month: '2-digit',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                        </p>
+                        [...pagos].reverse().map(pago => {
+                            const cfg = metodoConfig[pago.metodoPago] || {};
+                            const Icon = cfg.icon || CreditCard;
+                            return (
+                                <Card key={pago.id} style={styles.pagoItem}>
+                                    <div style={styles.pagoLeft}>
+                                        <div style={{
+                                            ...styles.pagoIconWrap,
+                                            backgroundColor:
+                                                (cfg.color || '#888') + '15',
+                                        }}>
+                                            <Icon
+                                                size={16}
+                                                color={cfg.color || '#888'} />
+                                        </div>
+                                        <div>
+                                            <p style={styles.pagoId}>
+                                                Pago #{pago.id} —
+                                                Pedido #{pago.pedidoId}
+                                            </p>
+                                            <p style={styles.pagoMeta}>
+                                                Mesa {pago.mesaNumero} ·{' '}
+                                                {new Date(pago.fechaPago)
+                                                    .toLocaleString('es-CO', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                            </p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div style={styles.pagoRight}>
-                                    <span style={styles.pagoMetodo}>
-                                        {pago.metodoPago}
-                                    </span>
-                                    <span style={styles.pagoTotal}>
-                                        ${pago.total?.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
-                        ))
+                                    <div style={styles.pagoRight}>
+                                        <Badge variant="default">
+                                            {cfg.label || pago.metodoPago}
+                                        </Badge>
+                                        <span style={{
+                                            ...styles.pagoTotal,
+                                            color: cfg.color ||
+                                                'var(--color-success)'
+                                        }}>
+                                            ${pago.total?.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </Card>
+                            );
+                        })
                     )}
                 </div>
             )}
 
-            {/* Modal de pago */}
+            {/* Modal pago */}
             {modalPago && (
-                <div style={styles.overlay}>
-                    <div style={styles.modal}>
-                        <h2 style={styles.modalTitle}>
-                            Cobrar Pedido #{modalPago.id}
-                        </h2>
-
-                        <div style={styles.modalResumen}>
-                            <p style={styles.modalMesa}>
-                                Mesa {modalPago.mesaNumero}
-                            </p>
-                            <p style={styles.modalTotal}>
-                                ${modalPago.total?.toLocaleString()}
-                            </p>
-                        </div>
-
-                        {/* Método de pago */}
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Método de pago
-                            </label>
-                            <div style={styles.metodos}>
-                                {['EFECTIVO', 'TARJETA', 'TRANSFERENCIA'].map(m => (
-                                    <button
-                                        key={m}
-                                        onClick={() => setMetodoPago(m)}
-                                        style={{
-                                            ...styles.metodoBtn,
-                                            backgroundColor: metodoPago === m
-                                                ? '#f97316' : '#0f172a',
-                                            color: metodoPago === m
-                                                ? 'white' : '#94a3b8',
-                                            border: metodoPago === m
-                                                ? 'none'
-                                                : '1px solid #334155',
-                                        }}>
-                                        {iconoMetodo[m]} {m}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div style={styles.modalBtns}>
-                            <button
+                <Modal
+                    title={`Cobrar Pedido #${modalPago.id}`}
+                    onClose={() => {
+                        setModalPago(null);
+                        setMetodoPago('EFECTIVO');
+                    }}
+                    footer={
+                        <>
+                            <Button
+                                variant="ghost"
                                 onClick={() => {
                                     setModalPago(null);
                                     setMetodoPago('EFECTIVO');
-                                }}
-                                style={styles.btnCancelar}>
+                                }}>
                                 Cancelar
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="accent"
                                 onClick={registrarPago}
-                                style={styles.btnConfirmar}>
-                                ✓ Confirmar Pago
-                            </button>
+                                disabled={pagandoId === modalPago.id}>
+                                <CheckCircle size={15} />
+                                {pagandoId === modalPago.id
+                                    ? 'Procesando...'
+                                    : 'Confirmar Pago'}
+                            </Button>
+                        </>
+                    }>
+
+                    {/* Resumen */}
+                    <div style={styles.pagoResumen}>
+                        <div>
+                            <p style={styles.pagoResumenLabel}>
+                                Mesa {modalPago.mesaNumero}
+                            </p>
+                            <p style={styles.pagoResumenSub}>
+                                Pedido #{modalPago.id}
+                            </p>
+                        </div>
+                        <p style={styles.pagoResumenTotal}>
+                            ${modalPago.total?.toLocaleString()}
+                        </p>
+                    </div>
+
+                    {/* Métodos */}
+                    <div>
+                        <p style={styles.metodoSelectLabel}>
+                            Método de pago
+                        </p>
+                        <div style={styles.metodosGrid}>
+                            {Object.entries(metodoConfig).map(([key, cfg]) => {
+                                const Icon = cfg.icon;
+                                const activo = metodoPago === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setMetodoPago(key)}
+                                        style={{
+                                            ...styles.metodoBtn,
+                                            borderColor: activo
+                                                ? cfg.color
+                                                : 'var(--border-default)',
+                                            backgroundColor: activo
+                                                ? cfg.color + '15'
+                                                : 'var(--bg-elevated)',
+                                            color: activo
+                                                ? cfg.color
+                                                : 'var(--text-secondary)',
+                                        }}>
+                                        <Icon size={20} />
+                                        <span style={{
+                                            fontSize: 'var(--text-sm)',
+                                            fontWeight: activo
+                                                ? 'var(--font-semibold)'
+                                                : 'var(--font-regular)'
+                                        }}>
+                                            {cfg.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
-                </div>
+                </Modal>
             )}
         </div>
-    );
+    </PageTransition>
+);
 }
 
 const styles = {
     container: {
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        padding: '24px',
-        fontFamily: 'sans-serif',
-    },
-    loading: {
-        color: 'white',
-        textAlign: 'center',
-        padding: '40px',
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '16px',
-    },
-    title: {
-        color: '#f97316',
-        fontSize: '32px',
-        fontWeight: 'bold',
-        margin: 0,
-        letterSpacing: '3px',
-    },
-    subtitle: {
-        color: '#94a3b8',
-        margin: '4px 0 0 0',
-        fontSize: '14px',
-    },
-    headerRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    usuario: {
-        color: '#94a3b8',
-        fontSize: '14px',
-    },
-    nav: { display: 'flex', gap: '8px' },
-    navBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#cbd5e1',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    logoutBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
-    },
-    error: {
-        backgroundColor: '#7f1d1d',
-        color: '#fca5a5',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    closeError: {
-        background: 'none',
-        border: 'none',
-        color: '#fca5a5',
-        cursor: 'pointer',
-        fontSize: '16px',
-    },
-    resumen: {
-        display: 'flex',
-        gap: '16px',
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-    },
-    statCard: {
-        backgroundColor: '#1e293b',
-        padding: '20px 28px',
-        borderRadius: '12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '4px',
+        gap: 'var(--space-5)',
+    },
+    loading: {
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '300px',
+    },
+    spinner: {
+        width: '32px',
+        height: '32px',
+        border: '3px solid var(--border-default)',
+        borderTop: '3px solid var(--color-primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+    },
+    kpiGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gap: 'var(--space-4)',
+    },
+    kpiCard: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-4)',
+    },
+    kpiIcon: {
+        width: '44px',
+        height: '44px',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--gradient-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+    },
+    kpiValor: {
+        fontSize: 'var(--text-2xl)',
+        fontWeight: 'var(--font-bold)',
+        color: 'var(--color-success)',
+        margin: 0,
+        lineHeight: 1.1,
+    },
+    kpiLabel: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        margin: '2px 0 0 0',
+        textTransform: 'uppercase',
+        letterSpacing: '0.4px',
+    },
+    metodosRow: {
+        display: 'flex',
+        gap: 'var(--space-4)',
+        flexWrap: 'wrap',
+    },
+    metodoCard: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        flex: 1,
         minWidth: '140px',
     },
-    statValor: {
-        color: '#22c55e',
-        fontSize: '24px',
-        fontWeight: 'bold',
+    metodoTotal: {
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--font-bold)',
+        margin: 0,
+        lineHeight: 1,
     },
-    statLabel: {
-        color: '#64748b',
-        fontSize: '12px',
+    metodoLabel: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        margin: '2px 0 0 0',
     },
     tabs: {
         display: 'flex',
-        gap: '24px',
-        marginBottom: '24px',
-        borderBottom: '1px solid #1e293b',
+        borderBottom: '1px solid var(--border-subtle)',
     },
     tab: {
-        padding: '12px 4px',
-        background: 'none',
+        padding: '10px 20px',
         border: 'none',
+        backgroundColor: 'transparent',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
+        borderBottom: '2px solid transparent',
+        marginBottom: '-1px',
+        transition: 'all var(--transition-fast)',
+    },
+    tabActive: {
+        color: 'var(--color-primary-light)',
+        borderBottomColor: 'var(--color-primary)',
     },
     grid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: '16px',
+        gap: 'var(--space-4)',
     },
-    card: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px',
+    pedidoCard: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '10px',
+        gap: 'var(--space-3)',
     },
-    cardHeader: {
+    pedidoHeader: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
     },
     pedidoId: {
-        color: '#f1f5f9',
-        fontWeight: 'bold',
-        fontSize: '16px',
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
     },
-    mesa: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        fontSize: '14px',
-    },
-    info: {
-        color: '#64748b',
-        fontSize: '13px',
+    meseroNombre: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
         margin: 0,
     },
     detalles: {
         display: 'flex',
         flexDirection: 'column',
         gap: '4px',
-        borderTop: '1px solid #334155',
-        paddingTop: '8px',
+        borderTop: '1px solid var(--border-subtle)',
+        paddingTop: 'var(--space-3)',
     },
-    detalle: {
+    detalleRow: {
         display: 'flex',
         justifyContent: 'space-between',
     },
     detalleNombre: {
-        color: '#cbd5e1',
-        fontSize: '13px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-secondary)',
     },
     detalleValor: {
-        color: '#94a3b8',
-        fontSize: '13px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
     totalRow: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderTop: '1px solid #334155',
-        paddingTop: '8px',
+        borderTop: '1px solid var(--border-subtle)',
+        paddingTop: 'var(--space-3)',
     },
     totalLabel: {
-        color: '#94a3b8',
-        fontSize: '14px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
     totalValor: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        fontSize: '22px',
-    },
-    btnCobrar: {
-        padding: '12px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#166534',
-        color: '#4ade80',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: 'bold',
+        fontSize: 'var(--text-2xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-accent)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
     historial: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: 'var(--space-3)',
     },
     pagoItem: {
-        backgroundColor: '#1e293b',
-        borderRadius: '10px',
-        padding: '16px 20px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        padding: 'var(--space-4)',
     },
     pagoLeft: {
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: 'var(--space-3)',
     },
-    pagoIcono: {
-        fontSize: '24px',
+    pagoIconWrap: {
+        width: '36px',
+        height: '36px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
     },
     pagoId: {
-        color: '#f1f5f9',
-        fontSize: '14px',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        color: 'var(--text-primary)',
         margin: 0,
-        fontWeight: '500',
     },
-    pagoFecha: {
-        color: '#64748b',
-        fontSize: '12px',
+    pagoMeta: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
         margin: '2px 0 0 0',
     },
     pagoRight: {
@@ -564,108 +612,67 @@ const styles = {
         alignItems: 'flex-end',
         gap: '4px',
     },
-    pagoMetodo: {
-        color: '#94a3b8',
-        fontSize: '11px',
-        backgroundColor: '#0f172a',
-        padding: '2px 8px',
-        borderRadius: '10px',
-    },
     pagoTotal: {
-        color: '#22c55e',
-        fontWeight: 'bold',
-        fontSize: '16px',
+        fontSize: 'var(--text-lg)',
+        fontWeight: 'var(--font-bold)',
     },
     vacio: {
-        color: '#64748b',
-        textAlign: 'center',
-        padding: '40px',
-    },
-    overlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-    },
-    modal: {
-        backgroundColor: '#1e293b',
-        borderRadius: '16px',
-        padding: '32px',
-        width: '100%',
-        maxWidth: '420px',
+        gridColumn: '1 / -1',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        alignItems: 'center',
+        padding: 'var(--space-12)',
     },
-    modalTitle: {
-        color: '#f1f5f9',
-        margin: 0,
-        fontSize: '20px',
-    },
-    modalResumen: {
-        backgroundColor: '#0f172a',
-        borderRadius: '10px',
-        padding: '16px',
+    pagoResumen: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        padding: 'var(--space-4)',
+        backgroundColor: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
     },
-    modalMesa: {
-        color: '#94a3b8',
+    pagoResumenLabel: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
         margin: 0,
-        fontSize: '14px',
     },
-    modalTotal: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        fontSize: '28px',
+    pagoResumenSub: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        margin: '2px 0 0 0',
+    },
+    pagoResumenTotal: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-accent)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
         margin: 0,
     },
-    field: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
+    metodoSelectLabel: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        color: 'var(--text-secondary)',
+        marginBottom: 'var(--space-3)',
     },
-    label: {
-        color: '#cbd5e1',
-        fontSize: '14px',
-    },
-    metodos: {
-        display: 'flex',
-        gap: '8px',
+    metodosGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: 'var(--space-3)',
     },
     metodoBtn: {
-        flex: 1,
-        padding: '12px 8px',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontWeight: '500',
-    },
-    modalBtns: {
         display: 'flex',
-        gap: '12px',
-        justifyContent: 'flex-end',
-    },
-    btnCancelar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#94a3b8',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        padding: 'var(--space-4)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid',
         cursor: 'pointer',
-    },
-    btnConfirmar: {
-        padding: '10px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#166534',
-        color: '#4ade80',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '14px',
+        fontFamily: 'var(--font-sans)',
+        transition: 'all var(--transition-fast)',
     },
 };

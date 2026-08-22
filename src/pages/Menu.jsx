@@ -1,52 +1,72 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import Badge from '../components/UI/Badge';
+import Modal from '../components/UI/Modal';
+import Input from '../components/UI/Input';
+import Select from '../components/UI/Select';
+import { showToast } from '../components/UI/Toast';
+import { Plus, Search, UtensilsCrossed } from 'lucide-react';
+import Confirm from '../components/UI/Confirm';
+import useConfirm from '../hooks/useConfirm';
+import PageTransition from '../components/UI/PageTransition';
+
+const categorias = ['PLATO FUERTE', 'ENTRADA', 'BEBIDA', 'POSTRE'];
+
+const categoriaConfig = {
+    'PLATO FUERTE': { emoji: '🍽️', badge: 'primary' },
+    'ENTRADA':      { emoji: '🥗', badge: 'accent' },
+    'BEBIDA':       { emoji: '🥤', badge: 'info' },
+    'POSTRE':       { emoji: '🍰', badge: 'warning' },
+};
 
 export default function Menu() {
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [modalCrear, setModalCrear] = useState(false);
     const [filtroCategoria, setFiltroCategoria] = useState('TODOS');
+    const [busqueda, setBusqueda] = useState('');
+    const [modalCrear, setModalCrear] = useState(false);
+    const { confirm, config } = useConfirm();
     const [nuevoProducto, setNuevoProducto] = useState({
-        nombre: '', descripcion: '', precio: '', categoria: 'PLATO FUERTE', disponible: true
+        nombre: '', descripcion: '', precio: '',
+        categoria: 'PLATO FUERTE', disponible: true
     });
+    const [usuario] = useState(() =>
+        JSON.parse(localStorage.getItem('usuario') || '{}'));
 
-    const { usuario, logout } = useAuth();
-    const navigate = useNavigate();
-
-    const categorias = ['TODOS', 'PLATO FUERTE', 'ENTRADA', 'BEBIDA', 'POSTRE'];
-
-    useEffect(() => {
-        cargarProductos();
-    }, []);
+    useEffect(() => { cargarProductos(); }, []);
 
     const cargarProductos = async () => {
         try {
-            const response = await axiosClient.get('/productos');
-            setProductos(response.data);
-        } catch (err) {
-            setError('Error al cargar productos');
+            const res = await axiosClient.get('/productos');
+            setProductos(res.data);
+        } catch {
+            showToast('Error al cargar productos', 'error');
         } finally {
             setLoading(false);
         }
     };
 
     const crearProducto = async () => {
+        if (!nuevoProducto.nombre || !nuevoProducto.precio) {
+            showToast('Nombre y precio son obligatorios', 'warning');
+            return;
+        }
         try {
             await axiosClient.post('/productos', {
                 ...nuevoProducto,
                 precio: parseFloat(nuevoProducto.precio)
             });
+            showToast('Producto creado correctamente', 'success');
             setModalCrear(false);
             setNuevoProducto({
                 nombre: '', descripcion: '', precio: '',
                 categoria: 'PLATO FUERTE', disponible: true
             });
             cargarProductos();
-        } catch (err) {
-            setError('Error al crear producto');
+        } catch {
+            showToast('Error al crear producto', 'error');
         }
     };
 
@@ -55,449 +75,436 @@ export default function Menu() {
             await axiosClient.patch(
                 `/productos/${id}/disponibilidad?disponible=${!disponible}`
             );
+            showToast(
+                !disponible ? 'Producto activado' : 'Producto desactivado',
+                !disponible ? 'success' : 'warning'
+            );
             cargarProductos();
-        } catch (err) {
-            setError('Error al cambiar disponibilidad');
+        } catch {
+            showToast('Error al cambiar disponibilidad', 'error');
         }
     };
 
-    const eliminarProducto = async (id) => {
-        if (!confirm('¿Seguro que quieres eliminar este producto?')) return;
-        try {
-            await axiosClient.delete(`/productos/${id}`);
-            cargarProductos();
-        } catch (err) {
-            setError('Error al eliminar producto');
-        }
-    };
+   const eliminarProducto = async (id) => {
+    const ok = await confirm({
+        titulo: '¿Eliminar producto?',
+        mensaje: 'Esta acción no se puede deshacer.',
+        variante: 'danger'
+    });
+    if (!ok) return;
+    try {
+        await axiosClient.delete(`/productos/${id}`);
+        showToast('Producto eliminado', 'success');
+        cargarProductos();
+    } catch {
+        showToast('Error al eliminar producto', 'error');
+    }
+};
 
-    const productosFiltrados = filtroCategoria === 'TODOS'
-        ? productos
-        : productos.filter(p => p.categoria === filtroCategoria);
+    const productosFiltrados = productos
+        .filter(p => filtroCategoria === 'TODOS' ||
+            p.categoria === filtroCategoria)
+        .filter(p => p.nombre.toLowerCase()
+            .includes(busqueda.toLowerCase()));
+
+    const conteoCategoria = (cat) =>
+        productos.filter(p => p.categoria === cat).length;
 
     if (loading) return (
-        <div style={styles.loading}>Cargando productos...</div>
+        <div style={styles.loading}>
+            <div style={styles.spinner} />
+        </div>
     );
 
     return (
+    <PageTransition>
         <div style={styles.container}>
-
-            {/* Header */}
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>MORA</h1>
-                    <p style={styles.subtitle}>Gestión de Menú</p>
+            {/* Top bar */}
+            <div style={styles.topBar}>
+                {/* Buscador */}
+                <div style={styles.searchWrap}>
+                    <Search
+                        size={16}
+                        color="var(--text-muted)"
+                        style={styles.searchIcon} />
+                    <input
+                        value={busqueda}
+                        onChange={e => setBusqueda(e.target.value)}
+                        placeholder="Buscar producto..."
+                        style={styles.searchInput}
+                        onFocus={e => {
+                            e.target.style.borderColor = 'var(--color-primary)';
+                        }}
+                        onBlur={e => {
+                            e.target.style.borderColor = 'var(--border-default)';
+                        }}
+                    />
                 </div>
-                <div style={styles.headerRight}>
-                    <span style={styles.usuario}>
-                        {usuario?.nombre} · {usuario?.rol}
+
+                {usuario?.rol === 'ADMIN' && (
+                    <Button
+                        onClick={() => setModalCrear(true)}
+                        variant="primary"
+                        size="sm">
+                        <Plus size={15} />
+                        Nuevo Producto
+                    </Button>
+                )}
+            </div>
+
+            {/* Tabs de categorías */}
+            <div style={styles.tabs}>
+                <button
+                    onClick={() => setFiltroCategoria('TODOS')}
+                    style={{
+                        ...styles.tab,
+                        ...(filtroCategoria === 'TODOS'
+                            ? styles.tabActive : {})
+                    }}>
+                    Todos
+                    <span style={styles.tabCount}>
+                        {productos.length}
                     </span>
-                    <div style={styles.nav}>
-                        <button onClick={() => navigate('/mesas')}
-                            style={styles.navBtn}>Mesas</button>
-                        <button onClick={() => navigate('/pedidos')}
-                            style={styles.navBtn}>Pedidos</button>
-                        {(usuario?.rol === 'CAJERO' || usuario?.rol === 'ADMIN') &&
-                        <button onClick={() => navigate('/caja')}
-                            style={styles.navBtn}>Caja</button>}
-                        <button onClick={() => navigate('/dashboard')}
-                            style={styles.navBtn}>Dashboard</button>
-                            {usuario?.rol === 'ADMIN' && (
-    <button
-        onClick={() => navigate('/usuarios')}
-        style={styles.navBtn}
-    >
-        Usuarios
-    </button>
-)}
-                        <button onClick={logout}
-                            style={styles.logoutBtn}>Salir</button>
-                            
-                    </div>
-                </div>
-            </div>
-
-            {error && (
-                <div style={styles.error}>
-                    {error}
-                    <button onClick={() => setError('')}
-                        style={styles.closeError}>✕</button>
-                </div>
-            )}
-
-            {/* Filtros por categoría */}
-            <div style={styles.filtros}>
-                {categorias.map(cat => (
-                    <button
-                        key={cat}
-                        onClick={() => setFiltroCategoria(cat)}
-                        style={{
-                            ...styles.filtroBth,
-                            backgroundColor: filtroCategoria === cat
-                                ? '#f97316' : '#1e293b',
-                            color: filtroCategoria === cat
-                                ? 'white' : '#94a3b8',
-                        }}>
-                        {cat}
-                    </button>
-                ))}
-            </div>
-
-            {/* Botón crear — solo ADMIN */}
-            {usuario?.rol === 'ADMIN' && (
-                <button onClick={() => setModalCrear(true)}
-                    style={styles.btnCrear}>
-                    + Nuevo Producto
                 </button>
-            )}
+                {categorias.map(cat => {
+                    const cfg = categoriaConfig[cat];
+                    return (
+                        <button
+                            key={cat}
+                            onClick={() => setFiltroCategoria(cat)}
+                            style={{
+                                ...styles.tab,
+                                ...(filtroCategoria === cat
+                                    ? styles.tabActive : {})
+                            }}>
+                            {cfg.emoji} {cat.charAt(0) +
+                                cat.slice(1).toLowerCase()}
+                            <span style={styles.tabCount}>
+                                {conteoCategoria(cat)}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
 
             {/* Grid de productos */}
             <div style={styles.grid}>
-                {productosFiltrados.map(producto => (
-                    <div key={producto.id} style={{
-                        ...styles.card,
-                        opacity: producto.disponible ? 1 : 0.5
-                    }}>
-                        <div style={styles.cardHeader}>
-                            <span style={styles.categoria}>
-                                {producto.categoria}
-                            </span>
-                            <span style={{
-                                ...styles.badge,
-                                backgroundColor: producto.disponible
-                                    ? '#166534' : '#7f1d1d',
-                                color: producto.disponible
-                                    ? '#86efac' : '#fca5a5',
+                {productosFiltrados.map(producto => {
+                    const cfg = categoriaConfig[producto.categoria] || {};
+                    return (
+                        <Card
+                            key={producto.id}
+                            style={{
+                                ...styles.productoCard,
+                                opacity: producto.disponible ? 1 : 0.55,
                             }}>
-                                {producto.disponible
-                                    ? 'Disponible' : 'No disponible'}
-                            </span>
-                        </div>
 
-                        <h3 style={styles.nombre}>{producto.nombre}</h3>
-                        <p style={styles.descripcion}>{producto.descripcion}</p>
-                        <p style={styles.precio}>
-                            ${producto.precio.toLocaleString()}
-                        </p>
-
-                        {usuario?.rol === 'ADMIN' && (
-                            <div style={styles.btnGroup}>
-                                <button
-                                    onClick={() => cambiarDisponibilidad(
-                                        producto.id, producto.disponible
-                                    )}
-                                    style={styles.btnDisponibilidad}>
-                                    {producto.disponible
-                                        ? 'Desactivar' : 'Activar'}
-                                </button>
-                                <button
-                                    onClick={() => eliminarProducto(producto.id)}
-                                    style={styles.btnEliminar}>
-                                    Eliminar
-                                </button>
+                            {/* Emoji categoría */}
+                            <div style={styles.productoEmoji}>
+                                {cfg.emoji || '🍴'}
                             </div>
-                        )}
+
+                            {/* Info */}
+                            <div style={styles.productoInfo}>
+                                <div style={styles.productoHeader}>
+                                    <h3 style={styles.productoNombre}>
+                                        {producto.nombre}
+                                    </h3>
+                                    <Badge variant={producto.disponible
+                                        ? 'success' : 'danger'}>
+                                        {producto.disponible
+                                            ? 'Disponible'
+                                            : 'No disponible'}
+                                    </Badge>
+                                </div>
+
+                                {producto.descripcion && (
+                                    <p style={styles.productoDesc}>
+                                        {producto.descripcion}
+                                    </p>
+                                )}
+
+                                <div style={styles.productoFooter}>
+                                    <Badge variant={cfg.badge || 'default'}>
+                                        {producto.categoria}
+                                    </Badge>
+                                    <span style={styles.productoPrecio}>
+                                        ${producto.precio?.toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Acciones admin */}
+                            {usuario?.rol === 'ADMIN' && (
+                                <div style={styles.productoAcciones}>
+                                    <button
+                                        onClick={() => cambiarDisponibilidad(
+                                            producto.id, producto.disponible
+                                        )}
+                                        style={{
+                                            ...styles.accionBtn,
+                                            color: producto.disponible
+                                                ? 'var(--color-warning)'
+                                                : 'var(--color-success)',
+                                            borderColor: producto.disponible
+                                                ? 'var(--color-warning)30'
+                                                : 'var(--color-success)30',
+                                        }}>
+                                        {producto.disponible
+                                            ? 'Desactivar'
+                                            : 'Activar'}
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            eliminarProducto(producto.id)}
+                                        style={{
+                                            ...styles.accionBtn,
+                                            color: 'var(--text-muted)',
+                                            borderColor: 'var(--border-default)',
+                                        }}>
+                                        Eliminar
+                                    </button>
+                                </div>
+                            )}
+                        </Card>
+                    );
+                })}
+
+                {productosFiltrados.length === 0 && (
+                    <div style={styles.vacio}>
+                        <UtensilsCrossed
+                            size={40}
+                            color="var(--text-disabled)" />
+                        <p style={{ color: 'var(--text-muted)', marginTop: '12px' }}>
+                            No hay productos
+                            {busqueda ? ` con "${busqueda}"` : ''}
+                        </p>
                     </div>
-                ))}
+                )}
             </div>
 
-            {/* Modal crear producto */}
+            {/* Modal crear */}
             {modalCrear && (
-                <div style={styles.overlay}>
-                    <div style={styles.modal}>
-                        <h2 style={styles.modalTitle}>Nuevo Producto</h2>
-
-                        {['nombre', 'descripcion', 'precio'].map(campo => (
-                            <div key={campo} style={styles.field}>
-                                <label style={styles.label}>
-                                    {campo.charAt(0).toUpperCase() + campo.slice(1)}
-                                </label>
-                                <input
-                                    type={campo === 'precio' ? 'number' : 'text'}
-                                    value={nuevoProducto[campo]}
-                                    onChange={e => setNuevoProducto({
-                                        ...nuevoProducto,
-                                        [campo]: e.target.value
-                                    })}
-                                    style={styles.input}
-                                />
-                            </div>
-                        ))}
-
-                        <div style={styles.field}>
-                            <label style={styles.label}>Categoría</label>
-                            <select
-                                value={nuevoProducto.categoria}
-                                onChange={e => setNuevoProducto({
-                                    ...nuevoProducto,
-                                    categoria: e.target.value
-                                })}
-                                style={styles.input}>
-                                {categorias.filter(c => c !== 'TODOS')
-                                    .map(c => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                            </select>
-                        </div>
-
-                        <div style={styles.modalBtns}>
-                            <button onClick={() => setModalCrear(false)}
-                                style={styles.btnCancelar}>
+                <Modal
+                    title="Nuevo Producto"
+                    onClose={() => setModalCrear(false)}
+                    footer={
+                        <>
+                            <Button
+                                variant="ghost"
+                                onClick={() => setModalCrear(false)}>
                                 Cancelar
-                            </button>
-                            <button onClick={crearProducto}
-                                style={styles.btnGuardar}>
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={crearProducto}>
                                 Crear Producto
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                            </Button>
+                        </>
+                    }>
+                    <Input
+                        label="Nombre"
+                        value={nuevoProducto.nombre}
+                        onChange={e => setNuevoProducto({
+                            ...nuevoProducto, nombre: e.target.value
+                        })}
+                        placeholder="Ej: Hamburguesa Clásica"
+                    />
+                    <Input
+                        label="Descripción"
+                        value={nuevoProducto.descripcion}
+                        onChange={e => setNuevoProducto({
+                            ...nuevoProducto, descripcion: e.target.value
+                        })}
+                        placeholder="Ingredientes o descripción..."
+                    />
+                    <Input
+                        label="Precio"
+                        type="number"
+                        value={nuevoProducto.precio}
+                        onChange={e => setNuevoProducto({
+                            ...nuevoProducto, precio: e.target.value
+                        })}
+                        placeholder="Ej: 25000"
+                    />
+                    <Select
+                        label="Categoría"
+                        value={nuevoProducto.categoria}
+                        onChange={e => setNuevoProducto({
+                            ...nuevoProducto, categoria: e.target.value
+                        })}
+                        options={categorias.map(c => ({
+                            value: c, label: c
+                        }))}
+                    />
+                </Modal>
             )}
         </div>
-    );
+        {config && <Confirm {...config} />}
+    </PageTransition>
+);
 }
 
 const styles = {
     container: {
-        minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        padding: '24px',
-        fontFamily: 'sans-serif',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-5)',
     },
     loading: {
-        color: 'white',
-        textAlign: 'center',
-        padding: '40px',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '300px',
     },
-    header: {
+    spinner: {
+        width: '32px',
+        height: '32px',
+        border: '3px solid var(--border-default)',
+        borderTop: '3px solid var(--color-primary)',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite',
+    },
+    topBar: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '24px',
+        gap: 'var(--space-3)',
         flexWrap: 'wrap',
-        gap: '16px',
     },
-    title: {
-        color: '#f97316',
-        fontSize: '32px',
-        fontWeight: 'bold',
-        margin: 0,
-        letterSpacing: '3px',
+    searchWrap: {
+        position: 'relative',
+        flex: 1,
+        maxWidth: '320px',
     },
-    subtitle: {
-        color: '#94a3b8',
-        margin: '4px 0 0 0',
-        fontSize: '14px',
+    searchIcon: {
+        position: 'absolute',
+        left: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
     },
-    headerRight: {
+    searchInput: {
+        width: '100%',
+        padding: '9px 14px 9px 36px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-elevated)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        transition: 'border-color var(--transition-fast)',
+    },
+    tabs: {
+        display: 'flex',
+        gap: 'var(--space-1)',
+        borderBottom: '1px solid var(--border-subtle)',
+        paddingBottom: '0',
+        flexWrap: 'wrap',
+    },
+    tab: {
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-    },
-    usuario: {
-        color: '#94a3b8',
-        fontSize: '14px',
-    },
-    nav: {
-        display: 'flex',
-        gap: '8px',
-    },
-    navBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
+        gap: '6px',
+        padding: '10px 16px',
+        border: 'none',
         backgroundColor: 'transparent',
-        color: '#cbd5e1',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '14px',
+        borderBottom: '2px solid transparent',
+        marginBottom: '-1px',
+        transition: 'all var(--transition-fast)',
     },
-    logoutBtn: {
-        padding: '8px 16px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#ef4444',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
+    tabActive: {
+        color: 'var(--color-primary-light)',
+        borderBottomColor: 'var(--color-primary)',
     },
-    error: {
-        backgroundColor: '#7f1d1d',
-        color: '#fca5a5',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '16px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    closeError: {
-        background: 'none',
-        border: 'none',
-        color: '#fca5a5',
-        cursor: 'pointer',
-        fontSize: '16px',
-    },
-    filtros: {
-        display: 'flex',
-        gap: '8px',
-        marginBottom: '20px',
-        flexWrap: 'wrap',
-    },
-    filtroBth: {
-        padding: '8px 16px',
-        borderRadius: '20px',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontWeight: '500',
-    },
-    btnCrear: {
-        padding: '12px 24px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        marginBottom: '24px',
+    tabCount: {
+        backgroundColor: 'var(--bg-overlay)',
+        borderRadius: 'var(--radius-full)',
+        padding: '1px 7px',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--font-semibold)',
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-        gap: '16px',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+        gap: 'var(--space-4)',
     },
-    card: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
-        padding: '20px',
+    productoCard: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: 'var(--space-3)',
     },
-    cardHeader: {
+    productoEmoji: {
+        fontSize: '32px',
+        lineHeight: 1,
+    },
+    productoInfo: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--space-2)',
+        flex: 1,
+    },
+    productoHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        gap: 'var(--space-2)',
+    },
+    productoNombre: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
+        margin: 0,
+    },
+    productoDesc: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
+        margin: 0,
+        lineHeight: 1.5,
+    },
+    productoFooter: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginTop: 'var(--space-1)',
     },
-    categoria: {
-        color: '#64748b',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        textTransform: 'uppercase',
-        letterSpacing: '1px',
+    productoPrecio: {
+        fontSize: 'var(--text-xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-accent)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
-    badge: {
-        padding: '3px 8px',
-        borderRadius: '20px',
-        fontSize: '11px',
-        fontWeight: 'bold',
-    },
-    nombre: {
-        color: '#f1f5f9',
-        margin: 0,
-        fontSize: '16px',
-    },
-    descripcion: {
-        color: '#94a3b8',
-        margin: 0,
-        fontSize: '13px',
-        lineHeight: '1.4',
-    },
-    precio: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        fontSize: '20px',
-        margin: 0,
-    },
-    btnGroup: {
+    productoAcciones: {
         display: 'flex',
-        gap: '8px',
-        marginTop: '4px',
+        gap: 'var(--space-2)',
+        paddingTop: 'var(--space-2)',
+        borderTop: '1px solid var(--border-subtle)',
     },
-    btnDisponibilidad: {
+    accionBtn: {
         flex: 1,
-        padding: '8px',
-        borderRadius: '6px',
-        border: 'none',
-        backgroundColor: '#0f172a',
-        color: '#94a3b8',
-        cursor: 'pointer',
-        fontSize: '12px',
-    },
-    btnEliminar: {
-        padding: '8px 12px',
-        borderRadius: '6px',
-        border: '1px solid #334155',
+        padding: '6px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid',
         backgroundColor: 'transparent',
-        color: '#64748b',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '12px',
+        transition: 'all var(--transition-fast)',
     },
-    overlay: {
-        position: 'fixed',
-        top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
+    vacio: {
+        gridColumn: '1 / -1',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-    },
-    modal: {
-        backgroundColor: '#1e293b',
-        borderRadius: '16px',
-        padding: '32px',
-        width: '100%',
-        maxWidth: '440px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '16px',
-    },
-    modalTitle: {
-        color: '#f1f5f9',
-        margin: 0,
-        fontSize: '20px',
-    },
-    field: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-    },
-    label: {
-        color: '#cbd5e1',
-        fontSize: '14px',
-    },
-    input: {
-        padding: '12px 16px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: '#0f172a',
-        color: '#f1f5f9',
-        fontSize: '14px',
-        outline: 'none',
-    },
-    modalBtns: {
-        display: 'flex',
-        gap: '12px',
-        justifyContent: 'flex-end',
-        marginTop: '8px',
-    },
-    btnCancelar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: '1px solid #334155',
-        backgroundColor: 'transparent',
-        color: '#94a3b8',
-        cursor: 'pointer',
-    },
-    btnGuardar: {
-        padding: '10px 20px',
-        borderRadius: '8px',
-        border: 'none',
-        backgroundColor: '#f97316',
-        color: 'white',
-        cursor: 'pointer',
-        fontWeight: 'bold',
+        padding: 'var(--space-12)',
     },
 };

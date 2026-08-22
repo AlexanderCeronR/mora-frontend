@@ -1,320 +1,420 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import {
+    Table2, ShoppingBag, CreditCard,
+    BarChart2, Shield, Sparkles,
+    ArrowRight, Check
+} from 'lucide-react';
 
 export default function Landing() {
     const navigate = useNavigate();
-    const [contador, setContador] = useState({ mesas: 0, pedidos: 0, productos: 0 });
+    const [contador, setContador] = useState({
+        mesas: 0, pedidos: 0, usuarios: 0
+    });
 
-    // Animación de contadores
     useEffect(() => {
-        const metas = { mesas: 20, pedidos: 500, productos: 50 };
-        const duracion = 2000;
+        const metas = { mesas: 20, pedidos: 500, usuarios: 50 };
         const pasos = 60;
-        const intervalo = duracion / pasos;
-
         let paso = 0;
         const timer = setInterval(() => {
             paso++;
-            const progreso = paso / pasos;
+            const p = paso / pasos;
             setContador({
-                mesas: Math.round(metas.mesas * progreso),
-                pedidos: Math.round(metas.pedidos * progreso),
-                productos: Math.round(metas.productos * progreso),
+                mesas: Math.round(metas.mesas * p),
+                pedidos: Math.round(metas.pedidos * p),
+                usuarios: Math.round(metas.usuarios * p),
             });
             if (paso >= pasos) clearInterval(timer);
-        }, intervalo);
-
+        }, 2000 / pasos);
         return () => clearInterval(timer);
     }, []);
 
-    const caracteristicas = [
+    const features = [
         {
-            icono: '🍽️',
+            icon: Table2,
             titulo: 'Gestión de Mesas',
-            descripcion: 'Control en tiempo real del estado de cada mesa — libre, ocupada o reservada.'
+            desc: 'Control en tiempo real del estado de cada mesa — libre, ocupada o reservada.',
+            color: '#443199',
         },
         {
-            icono: '📋',
+            icon: ShoppingBag,
             titulo: 'Pedidos Inteligentes',
-            descripcion: 'Crea y gestiona pedidos con seguimiento de estados desde cocina hasta entrega.'
+            desc: 'Crea y gestiona pedidos con seguimiento de estados desde cocina hasta entrega.',
+            color: '#792CA2',
         },
         {
-            icono: '💳',
+            icon: CreditCard,
             titulo: 'Caja y Pagos',
-            descripcion: 'Registra pagos en efectivo, tarjeta o transferencia con historial completo.'
+            desc: 'Registra pagos en efectivo, tarjeta o transferencia con historial completo.',
+            color: '#C13383',
         },
         {
-            icono: '📊',
-            titulo: 'Dashboard & IA',
-            descripcion: 'Analiza ventas con gráficas y pregúntale a la IA sobre el rendimiento del restaurante.'
+            icon: BarChart2,
+            titulo: 'Dashboard & Analytics',
+            desc: 'Analiza ventas con gráficas en tiempo real y métricas clave del negocio.',
+            color: '#E05454',
         },
         {
-            icono: '🔐',
+            icon: Sparkles,
+            titulo: 'Asistente con IA',
+            desc: 'Pregúntale a la IA sobre el rendimiento de tu restaurante y obtén insights.',
+            color: '#792CA2',
+        },
+        {
+            icon: Shield,
             titulo: 'Roles y Seguridad',
-            descripcion: 'Control de acceso por roles: Admin, Mesero y Cajero con JWT.'
-        },
-        {
-            icono: '🍕',
-            titulo: 'Gestión de Menú',
-            descripcion: 'Administra productos por categorías con disponibilidad en tiempo real.'
+            desc: 'Control de acceso por roles: Admin, Mesero y Cajero con JWT.',
+            color: '#443199',
         },
     ];
 
+    const roles = [
+        {
+            rol: 'ADMIN',
+            color: '#f59e0b',
+            gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
+            permisos: [
+                'Gestión completa del sistema',
+                'Crear y administrar usuarios',
+                'Acceso al dashboard y analytics',
+                'Configurar mesas y menú',
+            ]
+        },
+        {
+            rol: 'MESERO',
+            color: '#443199',
+            gradient: 'var(--gradient-primary)',
+            permisos: [
+                'Ver mesas disponibles',
+                'Crear y gestionar pedidos',
+                'Avanzar estados de pedidos',
+                'Consultar el menú',
+            ]
+        },
+        {
+            rol: 'CAJERO',
+            color: '#22c55e',
+            gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            permisos: [
+                'Ver pedidos entregados',
+                'Registrar pagos',
+                'Ver historial de caja',
+                'Acceso al dashboard',
+            ]
+        },
+    ];
+
+    const flujo = [
+        { num: '01', titulo: 'Login', desc: 'Accede con tu rol asignado' },
+        { num: '02', titulo: 'Mesa', desc: 'Asigna una mesa disponible' },
+        { num: '03', titulo: 'Pedido', desc: 'Crea el pedido con productos' },
+        { num: '04', titulo: 'Cocina', desc: 'Sigue el estado en tiempo real' },
+        { num: '05', titulo: 'Cobro', desc: 'El cajero registra el pago' },
+    ];
+
     return (
-        <div style={styles.container}>
+        <div style={styles.page}>
 
             {/* Navbar */}
             <nav style={styles.nav}>
-                <span style={styles.navLogo}>MORA</span>
-                <button
-                    onClick={() => navigate('/login')}
-                    style={styles.navBtn}>
-                    Iniciar Sesión
-                </button>
+                <div style={styles.navLogo}>
+                    <div style={styles.navLogoIcon}>M</div>
+                    <span style={styles.navLogoText}>MORA</span>
+                </div>
+                <div style={styles.navRight}>
+                    <span style={styles.navSub}>
+                        Manager Of Restaurant Administration
+                    </span>
+                    <button
+                        onClick={() => navigate('/login')}
+                        style={styles.navBtn}>
+                        Iniciar sesión
+                        <ArrowRight size={14} />
+                    </button>
+                </div>
             </nav>
 
             {/* Hero */}
             <section style={styles.hero}>
                 <div style={styles.heroBadge}>
-                    🚀 Sistema de Gestión para Restaurantes
+                    <Sparkles size={13} />
+                    Sistema de gestión con IA integrada
                 </div>
 
                 <h1 style={styles.heroTitle}>
-                    Manager Of<br />
-                    <span style={styles.heroTitleOrange}>
-                        Restaurant Administration
+                    Gestiona tu restaurante
+                    <span style={styles.heroTitleGradient}>
+                        {' '}con inteligencia
                     </span>
                 </h1>
 
-                <p style={styles.heroSubtitle}>
-                    Centraliza la gestión de tu restaurante — mesas, pedidos,
-                    cocina, pagos y análisis inteligente con IA en un solo lugar.
+                <p style={styles.heroDesc}>
+                    MORA centraliza mesas, pedidos, caja y análisis inteligente
+                    en una plataforma moderna diseñada para restaurantes modernos.
                 </p>
 
                 <div style={styles.heroBtns}>
                     <button
                         onClick={() => navigate('/login')}
-                        style={styles.btnPrimario}>
-                        Comenzar ahora →
+                        style={styles.heroBtnPrimary}>
+                        Comenzar ahora
+                        <ArrowRight size={16} />
                     </button>
                     <button
-                        onClick={() => document.getElementById('caracteristicas')
+                        onClick={() => document.getElementById('features')
                             .scrollIntoView({ behavior: 'smooth' })}
-                        style={styles.btnSecundario}>
+                        style={styles.heroBtnGhost}>
                         Ver características
                     </button>
                 </div>
 
-                {/* Contadores animados */}
+                {/* Contadores */}
                 <div style={styles.contadores}>
-                    <div style={styles.contador}>
-                        <span style={styles.contadorNumero}>
-                            {contador.mesas}+
-                        </span>
-                        <span style={styles.contadorLabel}>Mesas gestionadas</span>
-                    </div>
-                    <div style={styles.contadorDivider} />
-                    <div style={styles.contador}>
-                        <span style={styles.contadorNumero}>
-                            {contador.pedidos}+
-                        </span>
-                        <span style={styles.contadorLabel}>Pedidos procesados</span>
-                    </div>
-                    <div style={styles.contadorDivider} />
-                    <div style={styles.contador}>
-                        <span style={styles.contadorNumero}>
-                            {contador.productos}+
-                        </span>
-                        <span style={styles.contadorLabel}>Productos en menú</span>
-                    </div>
-                </div>
-            </section>
-
-            {/* Características */}
-            <section id="caracteristicas" style={styles.seccion}>
-                <h2 style={styles.seccionTitulo}>
-                    Todo lo que necesita tu restaurante
-                </h2>
-                <p style={styles.seccionSubtitulo}>
-                    MORA centraliza cada aspecto de la operación diaria
-                    en una plataforma moderna e intuitiva.
-                </p>
-
-                <div style={styles.grid}>
-                    {caracteristicas.map((c, i) => (
-                        <div key={i} style={styles.card}>
-                            <span style={styles.cardIcono}>{c.icono}</span>
-                            <h3 style={styles.cardTitulo}>{c.titulo}</h3>
-                            <p style={styles.cardDescripcion}>{c.descripcion}</p>
+                    {[
+                        { num: `${contador.mesas}+`, label: 'Mesas gestionadas' },
+                        { num: `${contador.pedidos}+`, label: 'Pedidos procesados' },
+                        { num: `${contador.usuarios}+`, label: 'Usuarios activos' },
+                    ].map((c, i) => (
+                        <div key={i} style={styles.contador}>
+                            <span style={styles.contadorNum}>{c.num}</span>
+                            <span style={styles.contadorLabel}>{c.label}</span>
                         </div>
                     ))}
                 </div>
             </section>
 
-            {/* Flujo del sistema */}
-            <section style={styles.flujoSeccion}>
-                <h2 style={styles.seccionTitulo}>
-                    ¿Cómo funciona MORA?
-                </h2>
+            {/* Features */}
+            <section id="features" style={styles.section}>
+                <div style={styles.sectionHeader}>
+                    <h2 style={styles.sectionTitle}>
+                        Todo lo que necesita tu restaurante
+                    </h2>
+                    <p style={styles.sectionDesc}>
+                        Una plataforma completa para gestionar cada aspecto
+                        de la operación diaria.
+                    </p>
+                </div>
 
-                <div style={styles.flujo}>
-                    {[
-                        { num: '01', titulo: 'Inicia sesión', desc: 'Accede con tu rol — Admin, Mesero o Cajero' },
-                        { num: '02', titulo: 'Asigna mesa', desc: 'El mesero selecciona la mesa disponible' },
-                        { num: '03', titulo: 'Crea pedido', desc: 'Agrega productos del menú al pedido' },
-                        { num: '04', titulo: 'Cocina prepara', desc: 'El estado avanza en tiempo real' },
-                        { num: '05', titulo: 'Entrega y cobra', desc: 'El cajero registra el pago fácilmente' },
-                    ].map((paso, i) => (
-                        <div key={i} style={styles.pasoCont}>
-                            <div style={styles.paso}>
-                                <span style={styles.pasoNum}>{paso.num}</span>
-                                <h4 style={styles.pasoTitulo}>{paso.titulo}</h4>
-                                <p style={styles.pasoDesc}>{paso.desc}</p>
+                <div style={styles.featuresGrid}>
+                    {features.map((f, i) => {
+                        const Icon = f.icon;
+                        return (
+                            <div key={i} style={styles.featureCard}>
+                                <div style={{
+                                    ...styles.featureIcon,
+                                    backgroundColor: f.color + '15',
+                                    border: `1px solid ${f.color}30`,
+                                }}>
+                                    <Icon size={20} color={f.color} />
+                                </div>
+                                <h3 style={styles.featureTitulo}>
+                                    {f.titulo}
+                                </h3>
+                                <p style={styles.featureDesc}>{f.desc}</p>
                             </div>
-                            {i < 4 && <span style={styles.pasoFlecha}>→</span>}
+                        );
+                    })}
+                </div>
+            </section>
+
+            {/* Flujo */}
+            <section style={styles.flujoSection}>
+                <h2 style={styles.sectionTitle}>¿Cómo funciona MORA?</h2>
+                <div style={styles.flujoGrid}>
+                    {flujo.map((paso, i) => (
+                        <div key={i} style={styles.flujoItem}>
+                            <div style={styles.flujoPaso}>
+                                <span style={styles.flujoNum}>{paso.num}</span>
+                                <h4 style={styles.flujoTitulo}>{paso.titulo}</h4>
+                                <p style={styles.flujoDesc}>{paso.desc}</p>
+                            </div>
+                            {i < flujo.length - 1 && (
+                                <ArrowRight
+                                    size={20}
+                                    color="var(--color-primary)"
+                                    style={styles.flujoArrow} />
+                            )}
                         </div>
                     ))}
                 </div>
             </section>
 
             {/* Roles */}
-            <section style={styles.seccion}>
-                <h2 style={styles.seccionTitulo}>Roles del sistema</h2>
+            <section style={styles.section}>
+                <div style={styles.sectionHeader}>
+                    <h2 style={styles.sectionTitle}>Roles del sistema</h2>
+                    <p style={styles.sectionDesc}>
+                        Cada usuario tiene acceso solo a lo que necesita.
+                    </p>
+                </div>
                 <div style={styles.rolesGrid}>
-                    {[
-                        {
-                            rol: 'ADMIN',
-                            color: '#f97316',
-                            icono: '👑',
-                            permisos: ['Gestionar mesas y productos', 'Ver todos los pedidos', 'Acceso al dashboard con IA', 'Gestionar usuarios']
-                        },
-                        {
-                            rol: 'MESERO',
-                            color: '#3b82f6',
-                            icono: '🍽️',
-                            permisos: ['Ver mesas disponibles', 'Crear y gestionar pedidos', 'Cambiar estado de pedidos', 'Ver el menú']
-                        },
-                        {
-                            rol: 'CAJERO',
-                            color: '#22c55e',
-                            icono: '💳',
-                            permisos: ['Ver pedidos entregados', 'Registrar pagos', 'Ver historial de caja', 'Acceso al dashboard']
-                        },
-                    ].map((r, i) => (
+                    {roles.map((r, i) => (
                         <div key={i} style={{
                             ...styles.rolCard,
-                            borderTop: `3px solid ${r.color}`
+                            borderTop: `3px solid ${r.color}`,
                         }}>
-                            <span style={styles.rolIcono}>{r.icono}</span>
-                            <h3 style={{ ...styles.rolTitulo, color: r.color }}>
+                            <div style={{
+                                ...styles.rolBadge,
+                                background: r.gradient,
+                            }}>
                                 {r.rol}
-                            </h3>
-                            <ul style={styles.permisosList}>
+                            </div>
+                            <div style={styles.rolPermisos}>
                                 {r.permisos.map((p, j) => (
-                                    <li key={j} style={styles.permiso}>
-                                        <span style={{ color: r.color }}>✓</span> {p}
-                                    </li>
+                                    <div key={j} style={styles.rolPermiso}>
+                                        <Check
+                                            size={14}
+                                            color={r.color} />
+                                        <span style={styles.rolPermisoTxt}>
+                                            {p}
+                                        </span>
+                                    </div>
                                 ))}
-                            </ul>
+                            </div>
                         </div>
                     ))}
                 </div>
             </section>
 
-            {/* CTA final */}
+            {/* CTA */}
             <section style={styles.cta}>
-                <h2 style={styles.ctaTitulo}>
-                    ¿Listo para modernizar tu restaurante?
-                </h2>
-                <p style={styles.ctaSubtitulo}>
-                    MORA centraliza tu operación y te da el control total
-                    de tu negocio desde cualquier dispositivo.
-                </p>
-                <button
-                    onClick={() => navigate('/login')}
-                    style={styles.btnPrimario}>
-                    Iniciar sesión →
-                </button>
+                <div style={styles.ctaContent}>
+                    <h2 style={styles.ctaTitle}>
+                        ¿Listo para modernizar tu restaurante?
+                    </h2>
+                    <p style={styles.ctaDesc}>
+                        Empieza hoy y transforma la gestión de tu negocio.
+                    </p>
+                    <button
+                        onClick={() => navigate('/login')}
+                        style={styles.ctaBtn}>
+                        Acceder a MORA
+                        <ArrowRight size={16} />
+                    </button>
+                </div>
+                <div style={styles.ctaDecor1} />
+                <div style={styles.ctaDecor2} />
             </section>
 
             {/* Footer */}
             <footer style={styles.footer}>
-                <span style={styles.footerLogo}>MORA</span>
-                <span style={styles.footerText}>
+                <div style={styles.footerLogo}>
+                    <div style={styles.footerLogoIcon}>M</div>
+                    <span style={styles.footerLogoText}>MORA</span>
+                </div>
+                <p style={styles.footerDesc}>
                     Manager Of Restaurant Administration
-                </span>
-                <span style={styles.footerText}>
+                </p>
+                <p style={styles.footerCopy}>
                     © 2026 — Desarrollado con Spring Boot + React
-                </span>
+                </p>
             </footer>
         </div>
     );
 }
 
 const styles = {
-    container: {
+    page: {
         minHeight: '100vh',
-        backgroundColor: '#0f172a',
-        fontFamily: 'sans-serif',
-        color: '#f1f5f9',
+        backgroundColor: 'var(--bg-base)',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-sans)',
     },
     nav: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        padding: '20px 40px',
-        borderBottom: '1px solid #1e293b',
+        padding: '20px 60px',
+        borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
-        backgroundColor: '#0f172a',
+        backgroundColor: 'rgba(9,9,15,0.8)',
+        backdropFilter: 'blur(12px)',
         zIndex: 100,
     },
     navLogo: {
-        color: '#f97316',
-        fontSize: '24px',
-        fontWeight: 'bold',
-        letterSpacing: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+    },
+    navLogoIcon: {
+        width: '32px',
+        height: '32px',
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--gradient-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'var(--font-bold)',
+        fontSize: '16px',
+    },
+    navLogoText: {
+        color: 'var(--text-primary)',
+        fontWeight: 'var(--font-bold)',
+        fontSize: 'var(--text-lg)',
+        letterSpacing: '2px',
+    },
+    navRight: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
+    },
+    navSub: {
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
     },
     navBtn: {
-        padding: '10px 24px',
-        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '9px 20px',
+        borderRadius: 'var(--radius-md)',
         border: 'none',
-        backgroundColor: '#f97316',
+        background: 'var(--gradient-primary)',
         color: 'white',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-semibold)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '14px',
+        boxShadow: 'var(--shadow-glow)',
     },
     hero: {
         textAlign: 'center',
-        padding: '80px 40px 60px',
+        padding: '100px 60px 80px',
         maxWidth: '800px',
         margin: '0 auto',
     },
     heroBadge: {
-        display: 'inline-block',
-        padding: '8px 20px',
-        borderRadius: '20px',
-        backgroundColor: '#1e293b',
-        border: '1px solid #334155',
-        color: '#94a3b8',
-        fontSize: '13px',
-        marginBottom: '24px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '6px 16px',
+        borderRadius: 'var(--radius-full)',
+        backgroundColor: 'var(--color-primary-10)',
+        border: '1px solid var(--color-primary-10)',
+        color: 'var(--color-primary-light)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        marginBottom: '28px',
     },
     heroTitle: {
-        fontSize: '56px',
-        fontWeight: 'bold',
-        lineHeight: '1.1',
-        margin: '0 0 24px 0',
-        color: '#f1f5f9',
+        fontSize: '52px',
+        fontWeight: 'var(--font-bold)',
+        lineHeight: 1.1,
+        margin: '0 0 20px 0',
+        color: 'var(--text-primary)',
     },
-    heroTitleOrange: {
-        color: '#f97316',
+    heroTitleGradient: {
+        background: 'var(--gradient-full)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
-    heroSubtitle: {
-        fontSize: '18px',
-        color: '#94a3b8',
-        lineHeight: '1.6',
+    heroDesc: {
+        fontSize: 'var(--text-lg)',
+        color: 'var(--text-secondary)',
+        lineHeight: 1.7,
         marginBottom: '40px',
     },
     heroBtns: {
@@ -322,37 +422,45 @@ const styles = {
         gap: '16px',
         justifyContent: 'center',
         flexWrap: 'wrap',
-        marginBottom: '60px',
+        marginBottom: '64px',
     },
-    btnPrimario: {
+    heroBtnPrimary: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
         padding: '14px 32px',
-        borderRadius: '10px',
+        borderRadius: 'var(--radius-md)',
         border: 'none',
-        backgroundColor: '#f97316',
+        background: 'var(--gradient-primary)',
         color: 'white',
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontWeight: 'bold',
-        fontSize: '16px',
+        boxShadow: 'var(--shadow-glow)',
     },
-    btnSecundario: {
+    heroBtnGhost: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
         padding: '14px 32px',
-        borderRadius: '10px',
-        border: '1px solid #334155',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#cbd5e1',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-base)',
+        fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        fontSize: '16px',
     },
     contadores: {
         display: 'flex',
         justifyContent: 'center',
-        alignItems: 'center',
-        gap: '40px',
-        flexWrap: 'wrap',
-        backgroundColor: '#1e293b',
-        borderRadius: '16px',
+        gap: '60px',
         padding: '32px 48px',
-        border: '1px solid #334155',
+        backgroundColor: 'var(--bg-surface)',
+        borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--border-subtle)',
+        flexWrap: 'wrap',
     },
     contador: {
         display: 'flex',
@@ -360,191 +468,263 @@ const styles = {
         alignItems: 'center',
         gap: '4px',
     },
-    contadorNumero: {
-        color: '#f97316',
-        fontSize: '36px',
-        fontWeight: 'bold',
+    contadorNum: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-accent)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
     },
     contadorLabel: {
-        color: '#64748b',
-        fontSize: '13px',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-muted)',
     },
-    contadorDivider: {
-        width: '1px',
-        height: '48px',
-        backgroundColor: '#334155',
-    },
-    seccion: {
-        padding: '80px 40px',
+    section: {
+        padding: '80px 60px',
         maxWidth: '1100px',
         margin: '0 auto',
     },
-    seccionTitulo: {
-        fontSize: '36px',
-        fontWeight: 'bold',
+    sectionHeader: {
         textAlign: 'center',
-        marginBottom: '12px',
-        color: '#f1f5f9',
-    },
-    seccionSubtitulo: {
-        color: '#94a3b8',
-        textAlign: 'center',
-        fontSize: '16px',
         marginBottom: '48px',
-        maxWidth: '600px',
-        margin: '0 auto 48px',
     },
-    grid: {
+    sectionTitle: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
+        color: 'var(--text-primary)',
+        margin: '0 0 12px 0',
+    },
+    sectionDesc: {
+        fontSize: 'var(--text-base)',
+        color: 'var(--text-secondary)',
+        maxWidth: '520px',
+        margin: '0 auto',
+        lineHeight: 1.6,
+    },
+    featuresGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
         gap: '20px',
     },
-    card: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
+    featureCard: {
         padding: '28px',
-        border: '1px solid #334155',
+        backgroundColor: 'var(--bg-surface)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
+        transition: 'all var(--transition-base)',
     },
-    cardIcono: {
-        fontSize: '32px',
+    featureIcon: {
+        width: '44px',
+        height: '44px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    cardTitulo: {
-        color: '#f1f5f9',
-        fontSize: '18px',
+    featureTitulo: {
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
         margin: 0,
     },
-    cardDescripcion: {
-        color: '#94a3b8',
-        fontSize: '14px',
-        lineHeight: '1.6',
+    featureDesc: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-secondary)',
+        lineHeight: 1.6,
         margin: 0,
     },
-    flujoSeccion: {
-        padding: '80px 40px',
-        backgroundColor: '#1e293b',
+    flujoSection: {
+        padding: '80px 60px',
+        backgroundColor: 'var(--bg-surface)',
+        borderTop: '1px solid var(--border-subtle)',
+        borderBottom: '1px solid var(--border-subtle)',
+        textAlign: 'center',
     },
-    flujo: {
+    flujoGrid: {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '8px',
-        maxWidth: '1100px',
+        marginTop: '48px',
+        maxWidth: '900px',
         margin: '48px auto 0',
     },
-    pasoCont: {
+    flujoItem: {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
     },
-    paso: {
-        backgroundColor: '#0f172a',
-        borderRadius: '12px',
-        padding: '24px',
-        width: '160px',
+    flujoPaso: {
+        padding: '20px',
+        backgroundColor: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-default)',
+        width: '140px',
         textAlign: 'center',
-        border: '1px solid #334155',
     },
-    pasoNum: {
-        color: '#f97316',
-        fontSize: '28px',
-        fontWeight: 'bold',
+    flujoNum: {
         display: 'block',
+        fontSize: 'var(--text-2xl)',
+        fontWeight: 'var(--font-bold)',
+        background: 'var(--gradient-primary)',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
         marginBottom: '8px',
     },
-    pasoTitulo: {
-        color: '#f1f5f9',
-        fontSize: '14px',
-        margin: '0 0 8px 0',
+    flujoTitulo: {
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-semibold)',
+        color: 'var(--text-primary)',
+        margin: '0 0 4px 0',
     },
-    pasoDesc: {
-        color: '#64748b',
-        fontSize: '12px',
+    flujoDesc: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
         margin: 0,
-        lineHeight: '1.4',
+        lineHeight: 1.4,
     },
-    pasoFlecha: {
-        color: '#f97316',
-        fontSize: '24px',
-        fontWeight: 'bold',
+    flujoArrow: {
+        flexShrink: 0,
+        opacity: 0.5,
     },
     rolesGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         gap: '20px',
-        marginTop: '48px',
     },
     rolCard: {
-        backgroundColor: '#1e293b',
-        borderRadius: '12px',
         padding: '28px',
-        border: '1px solid #334155',
+        backgroundColor: 'var(--bg-surface)',
+        borderRadius: 'var(--radius-lg)',
+        border: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
+        gap: '20px',
     },
-    rolIcono: {
-        fontSize: '36px',
+    rolBadge: {
+        display: 'inline-flex',
+        padding: '6px 16px',
+        borderRadius: 'var(--radius-full)',
+        color: 'white',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-bold)',
+        letterSpacing: '1px',
+        alignSelf: 'flex-start',
     },
-    rolTitulo: {
-        fontSize: '20px',
-        fontWeight: 'bold',
-        margin: 0,
-        letterSpacing: '2px',
-    },
-    permisosList: {
-        listStyle: 'none',
-        padding: 0,
-        margin: 0,
+    rolPermisos: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '10px',
     },
-    permiso: {
-        color: '#94a3b8',
-        fontSize: '14px',
+    rolPermiso: {
         display: 'flex',
-        gap: '8px',
+        alignItems: 'center',
+        gap: '10px',
+    },
+    rolPermisoTxt: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-secondary)',
     },
     cta: {
+        position: 'relative',
         textAlign: 'center',
-        padding: '80px 40px',
-        backgroundColor: '#1e293b',
-        borderTop: '1px solid #334155',
+        padding: '80px 60px',
+        background: 'var(--gradient-full)',
+        overflow: 'hidden',
     },
-    ctaTitulo: {
-        fontSize: '36px',
-        fontWeight: 'bold',
-        marginBottom: '16px',
-        color: '#f1f5f9',
+    ctaContent: {
+        position: 'relative',
+        zIndex: 2,
     },
-    ctaSubtitulo: {
-        color: '#94a3b8',
-        fontSize: '16px',
+    ctaTitle: {
+        fontSize: 'var(--text-3xl)',
+        fontWeight: 'var(--font-bold)',
+        color: 'white',
+        margin: '0 0 12px 0',
+    },
+    ctaDesc: {
+        fontSize: 'var(--text-base)',
+        color: 'rgba(255,255,255,0.75)',
         marginBottom: '32px',
-        maxWidth: '500px',
-        margin: '0 auto 32px',
+    },
+    ctaBtn: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '14px 32px',
+        borderRadius: 'var(--radius-md)',
+        border: 'none',
+        backgroundColor: 'white',
+        color: '#443199',
+        fontSize: 'var(--text-base)',
+        fontWeight: 'var(--font-bold)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
+        boxShadow: 'var(--shadow-lg)',
+    },
+    ctaDecor1: {
+        position: 'absolute',
+        width: '300px',
+        height: '300px',
+        borderRadius: '50%',
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        top: '-80px',
+        right: '-60px',
+    },
+    ctaDecor2: {
+        position: 'absolute',
+        width: '200px',
+        height: '200px',
+        borderRadius: '50%',
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        bottom: '-60px',
+        left: '-40px',
     },
     footer: {
-        padding: '32px 40px',
-        borderTop: '1px solid #1e293b',
+        padding: '40px 60px',
+        borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
-        justifyContent: 'space-between',
+        flexDirection: 'column',
         alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
+        gap: '8px',
     },
     footerLogo: {
-        color: '#f97316',
-        fontWeight: 'bold',
-        letterSpacing: '3px',
-        fontSize: '18px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
     },
-    footerText: {
-        color: '#475569',
-        fontSize: '13px',
+    footerLogoIcon: {
+        width: '28px',
+        height: '28px',
+        borderRadius: 'var(--radius-sm)',
+        background: 'var(--gradient-primary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'var(--font-bold)',
+        fontSize: '14px',
+    },
+    footerLogoText: {
+        color: 'var(--text-primary)',
+        fontWeight: 'var(--font-bold)',
+        letterSpacing: '2px',
+        fontSize: 'var(--text-base)',
+    },
+    footerDesc: {
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        margin: 0,
+    },
+    footerCopy: {
+        color: 'var(--text-disabled)',
+        fontSize: 'var(--text-xs)',
+        margin: 0,
     },
 };

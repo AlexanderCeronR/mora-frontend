@@ -5,11 +5,12 @@ import Button from '../components/UI/Button';
 import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
 import Input from '../components/UI/Input';
-import { showToast } from '../components/UI/Toast';
+import { showToast } from '../components/ui/Toast';
 import { Plus, Users, Circle } from 'lucide-react';
 import Confirm from '../components/UI/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/UI/PageTransition';
+import { QRCodeSVG } from 'qrcode.react';
 
 const estadoConfig = {
     LIBRE:     { badge: 'success', label: 'Libre',     color: 'var(--color-success)' },
@@ -153,6 +154,7 @@ return (
                             {s.count}
                         </p>
                         <p style={styles.statLabel}>{s.label}</p>
+                        {/* QR de la mesa */}
                     </Card>
                 ))}
             </div>
@@ -236,6 +238,17 @@ return (
                                     Eliminar mesa
                                 </button>
                             )}
+                            {/* QR de la mesa */}
+<div style={styles.qrWrap}>
+    <QRCodeSVG
+        value={`http://192.168.1.55:5173/cliente/mesa/${mesa.id}`}
+        size={80}
+        bgColor="transparent"
+        fgColor="#f0f0ff"
+        level="M"
+    />
+    <p style={styles.qrLabel}>Escanear para pedir</p>
+</div>
                         </Card>
                     );
                 })}

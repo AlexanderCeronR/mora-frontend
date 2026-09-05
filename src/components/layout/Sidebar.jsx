@@ -1,8 +1,10 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
-    ShoppingBag, CreditCard, Users, LogOut
+    ShoppingBag, CreditCard, Users, LogOut,
+    ClipboardList  // ← nuevo ícono
 } from 'lucide-react';
 
 const navItems = [
@@ -13,22 +15,28 @@ const navItems = [
         roles: ['ADMIN', 'CAJERO']
     },
     {
+        path: '/supervisor',
+        label: 'Supervisor',
+        icon: ClipboardList,
+        roles: ['ADMIN', 'SUPERVISOR']
+    },
+    {
         path: '/mesas',
         label: 'Mesas',
         icon: Table2,
-        roles: ['ADMIN', 'MESERO', 'CAJERO']
+        roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR']
     },
     {
         path: '/menu',
         label: 'Menú',
         icon: UtensilsCrossed,
-        roles: ['ADMIN', 'MESERO', 'CAJERO']
+        roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR']
     },
     {
         path: '/pedidos',
         label: 'Pedidos',
         icon: ShoppingBag,
-        roles: ['ADMIN', 'MESERO', 'CAJERO']
+        roles: ['ADMIN', 'MESERO', 'SUPERVISOR']
     },
     {
         path: '/caja',

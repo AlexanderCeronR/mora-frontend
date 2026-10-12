@@ -6,16 +6,17 @@ import Badge from '../components/UI/Badge';
 import Modal from '../components/UI/Modal';
 import Input from '../components/UI/Input';
 import Select from '../components/UI/Select';
-import { showToast } from '../components/UI/Toast';
-import { Plus, Users, Search, Crown, UtensilsCrossed, Calculator } from 'lucide-react';
+import { showToast } from '../components/ui/Toast';
+import { Plus, Users, Search, Crown, UtensilsCrossed, Calculator, Eye } from 'lucide-react';
 import Confirm from '../components/UI/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/UI/PageTransition';
 
 const rolConfig = {
-    ADMIN:  { badge: 'warning', icon: Crown,           color: '#f59e0b', label: 'Administrador' },
-    MESERO: { badge: 'primary', icon: UtensilsCrossed, color: 'var(--color-primary-light)', label: 'Mesero' },
-    CAJERO: { badge: 'success', icon: Calculator,      color: 'var(--color-success)', label: 'Cajero' },
+    ADMIN:      { badge: 'warning', icon: Crown,           color: '#f59e0b',                    label: 'Administrador' },
+    SUPERVISOR: { badge: 'accent',  icon: Eye,             color: 'var(--color-accent-light)',   label: 'Supervisor' },
+    MESERO:     { badge: 'primary', icon: UtensilsCrossed, color: 'var(--color-primary-light)', label: 'Mesero' },
+    CAJERO:     { badge: 'success', icon: Calculator,      color: 'var(--color-success)',        label: 'Cajero' },
 };
 
 export default function Usuarios() {
@@ -106,6 +107,7 @@ const eliminarUsuario = async (id, nombre) => {
     const rolesOptions = [
         { value: 'MESERO', label: 'Mesero' },
         { value: 'CAJERO', label: 'Cajero' },
+        { value: 'SUPERVISOR', label: 'Supervisor' },
         { value: 'ADMIN', label: 'Administrador' },
     ];
 
@@ -123,6 +125,7 @@ const eliminarUsuario = async (id, nombre) => {
                 {[
                     { label: 'Total', count: usuarios.length, color: 'var(--color-primary-light)' },
                     { label: 'Admins', count: conteoRol('ADMIN'), color: '#f59e0b' },
+                    { label: 'Supervisores', count: conteoRol('SUPERVISOR'), color: 'var(--color-accent-light)' },
                     { label: 'Meseros', count: conteoRol('MESERO'), color: 'var(--color-primary-light)' },
                     { label: 'Cajeros', count: conteoRol('CAJERO'), color: 'var(--color-success)' },
                 ].map(s => (
@@ -162,7 +165,7 @@ const eliminarUsuario = async (id, nombre) => {
 
                     {/* Filtro por rol */}
                     <div style={styles.filtros}>
-                        {['TODOS', 'ADMIN', 'MESERO', 'CAJERO'].map(r => (
+                        {['TODOS', 'ADMIN', 'SUPERVISOR', 'MESERO', 'CAJERO'].map(r => (
                             <button
                                 key={r}
                                 onClick={() => setFiltroRol(r)}

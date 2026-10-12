@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../api/axiosClient';
-import Card from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import Badge from '../components/ui/Badge';
-import PageTransition from '../components/ui/PageTransition';
+import Card from '../components/UI/Card';
+import Button from '../components/UI/Button';
+import Badge from '../components/UI/Badge';
+import PageTransition from '../components/UI/PageTransition';
 import { showToast } from '../components/ui/Toast';
 import {
     ClipboardList, Users, ShoppingBag,
@@ -310,6 +310,46 @@ export default function Supervisor() {
                                         </p>
                                     )}
 
+                                    
+{mesero.pedidos?.map(p => (
+    <div key={p.id} style={styles.meserosPedidoItem}>
+        <span style={styles.meserosPedidoMesa}>
+            Mesa {p.mesa}
+        </span>
+        <Badge variant={
+            p.estado === 'PENDIENTE' ? 'warning' :
+            p.estado === 'EN_PREPARACION' ? 'info' :
+            p.estado === 'LISTO' ? 'primary' :
+            'success'
+        }>
+            {p.estado.replace('_', ' ')}
+        </Badge>
+        <span style={styles.meserosPedidoTotal}>
+            ${p.total?.toLocaleString()}
+        </span>
+        {/* Botón reasignar */}
+        <button
+            onClick={() => {
+                const nuevoMeseroId = prompt(
+                    'ID del nuevo mesero:'
+                );
+                if (nuevoMeseroId) {
+                    axiosClient.patch(
+                        `/supervisor/pedidos/${p.id}/reasignar/${nuevoMeseroId}`
+                    ).then(() => {
+                        showToast('Pedido reasignado', 'success');
+                        cargarDatos();
+                    }).catch(() => {
+                        showToast('Error al reasignar', 'error');
+                    });
+                }
+            }}
+            style={styles.reasignarBtn}>
+            Reasignar
+        </button>
+    </div>
+))}
+
                                     {/* Toggle disponibilidad */}
                                     <button
                                         onClick={() => cambiarDisponibilidad(
@@ -579,4 +619,16 @@ const styles = {
         width: '100%',
         transition: 'all var(--transition-fast)',
     },
+
+    reasignarBtn: {
+    padding: '3px 8px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-warning)30',
+    backgroundColor: 'transparent',
+    color: 'var(--color-warning)',
+    fontSize: 'var(--text-xs)',
+    fontFamily: 'var(--font-sans)',
+    cursor: 'pointer',
+    },
 };
+

@@ -2,8 +2,7 @@ import axios from 'axios';
 
 // URL base del backend
 const axiosClient = axios.create({
-    baseURL: 'http://192.168.1.55:8080',
-    // ← usa tu IP local en vez de localhost
+    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080',
     headers: {
         'Content-Type': 'application/json'
     }

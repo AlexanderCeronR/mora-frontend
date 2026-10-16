@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axiosClient from '../api/axiosClient';
-import Card from '../components/UI/Card';
-import Button from '../components/UI/Button';
-import Badge from '../components/UI/Badge';
-import PageTransition from '../components/UI/PageTransition';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import PageTransition from '../components/ui/PageTransition';
 import { showToast } from '../components/ui/Toast';
 import {
     ClipboardList, Users, ShoppingBag,

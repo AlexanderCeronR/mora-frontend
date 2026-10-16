@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import Card from '../components/UI/Card';
-import Button from '../components/UI/Button';
-import Badge from '../components/UI/Badge';
-import Modal from '../components/UI/Modal';
-import Input from '../components/UI/Input';
-import Select from '../components/UI/Select';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
 import { showToast } from '../components/ui/Toast';
 import { Plus, Users, Search, Crown, UtensilsCrossed, Calculator, Eye } from 'lucide-react';
-import Confirm from '../components/UI/Confirm';
+import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
-import PageTransition from '../components/UI/PageTransition';
+import PageTransition from '../components/ui/PageTransition';
 
 const rolConfig = {
     ADMIN:      { badge: 'warning', icon: Crown,           color: '#f59e0b',                    label: 'Administrador' },

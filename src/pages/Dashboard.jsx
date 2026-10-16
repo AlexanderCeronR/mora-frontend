@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import Card from '../components/UI/Card';
-import Button from '../components/UI/Button';
-import { showToast } from '../components/UI/Toast';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import { showToast } from '../components/ui/Toast';
 import {
     TrendingUp, ShoppingBag, CreditCard,
     Receipt, Send, Sparkles
@@ -12,8 +12,8 @@ import {
     Tooltip, PieChart, Pie, Cell,
     ResponsiveContainer, Legend
 } from 'recharts';
-import Skeleton, { SkeletonCard } from '../components/UI/Skeleton';
-import PageTransition from '../components/UI/PageTransition';
+import Skeleton, { SkeletonCard } from '../components/ui/Skeleton';
+import PageTransition from '../components/ui/PageTransition';
 
 const COLORES = ['#443199', '#792CA2', '#C13383', '#E05454', '#f59e0b'];
 

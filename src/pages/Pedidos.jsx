@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import Card from '../components/UI/Card';
-import Button from '../components/UI/Button';
-import Badge from '../components/UI/Badge';
-import Modal from '../components/UI/Modal';
-import Select from '../components/UI/Select';
-import { showToast } from '../components/UI/Toast';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import Select from '../components/ui/Select';
+import { showToast } from '../components/ui/Toast';
 import { Plus, ShoppingBag, Clock, ChevronRight } from 'lucide-react';
-import Confirm from '../components/UI/Confirm';
+import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
-import PageTransition from '../components/UI/PageTransition';
+import PageTransition from '../components/ui/PageTransition';
 
 const estadoConfig = {
     PENDIENTE:      { badge: 'warning', label: 'Pendiente',      siguiente: 'EN_PREPARACION' },

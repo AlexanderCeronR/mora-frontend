@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
-import { showToast } from '../components/UI/Toast';
+import { showToast } from '../components/ui/Toast';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
-import PageTransition from '../components/UI/PageTransition';
+import PageTransition from '../components/ui/PageTransition';
 
 export default function Login() {
     const [email, setEmail] = useState('');

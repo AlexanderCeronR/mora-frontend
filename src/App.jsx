@@ -66,8 +66,8 @@ export default function App() {
                             <AppWithLayout><Usuarios /></AppWithLayout>
                         </PrivateRoute>
                     } />
-                    // Ruta pública — sin PrivateRoute ni AppLayout
-<Route path="/cliente/mesa/:mesaId" element={<ClienteMenu />} />
+                    {/*Ruta pública — sin PrivateRoute ni AppLayout*/}
+                    <Route path="/cliente/mesa/:mesaId" element={<ClienteMenu />} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

@@ -12,6 +12,7 @@ import Dashboard from './pages/Dashboard';
 import Usuarios from './pages/Usuarios';
 import Supervisor from './pages/Supervisor';
 import ClienteMenu from './pages/ClienteMenu';
+import Cocina from './pages/Cocina';
 
 function AppWithLayout({ children }) {
     return (
@@ -68,6 +69,11 @@ export default function App() {
                     } />
                     {/*Ruta pública — sin PrivateRoute ni AppLayout*/}
                     <Route path="/cliente/mesa/:mesaId" element={<ClienteMenu />} />
+                    <Route path="/cocina" element={
+    <PrivateRoute roles={['ADMIN', 'COCINA', 'SUPERVISOR']}>
+        <AppWithLayout><Cocina /></AppWithLayout>
+    </PrivateRoute>
+} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>

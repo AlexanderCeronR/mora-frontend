@@ -43,6 +43,28 @@ export default function Pedidos() {
         'LISTO', 'ENTREGADO', 'PAGADO'];
 
     useEffect(() => { cargarDatos(); }, []);
+    // Polling para notificar al mesero cuando un pedido esté LISTO
+    useEffect(() => {
+    const interval = setInterval(async () => {
+        try {
+            const res = await axiosClient.get('/cocina/pedidos/listos');
+            const listos = res.data;
+            listos.forEach(p => {
+                const key = `notif_${p.id}`;
+                if (!localStorage.getItem(key)) {
+                    showToast(
+                        `🔔 Pedido #${p.id} (Mesa ${p.mesa}) está LISTO`,
+                        'success'
+                    );
+                    localStorage.setItem(key, 'true');
+                }
+            });
+        } catch {
+            // silencioso
+        }
+    }, 15000);
+    return () => clearInterval(interval);
+}, []);
 
     const cargarDatos = async () => {
         try {

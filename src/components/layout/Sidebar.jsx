@@ -4,7 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
-    ClipboardList  // ← nuevo ícono
+    ClipboardList,  // ← nuevo ícono
+    ClipboardList, ChefHat
 } from 'lucide-react';
 
 const navItems = [
@@ -49,6 +50,12 @@ const navItems = [
         label: 'Usuarios',
         icon: Users,
         roles: ['ADMIN']
+    },
+    {
+        path: '/cocina',
+        label: 'Cocina',
+        icon: ChefHat,
+        roles: ['ADMIN', 'COCINA', 'SUPERVISOR']
     },
 ];
 

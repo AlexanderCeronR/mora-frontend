@@ -241,7 +241,7 @@ return (
                             {/* QR de la mesa */}
 <div style={styles.qrWrap}>
     <QRCodeSVG
-        value={`http://192.168.1.55:5173/cliente/mesa/${mesa.id}`}
+        value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
         size={80}
         bgColor="transparent"
         fgColor="#f0f0ff"

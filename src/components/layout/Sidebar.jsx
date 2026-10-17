@@ -4,8 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
-    ClipboardList,  // ← nuevo ícono
-    ClipboardList, ChefHat
+    ClipboardList, ChefHat // ← nuevo ícono
 } from 'lucide-react';
 
 const navItems = [

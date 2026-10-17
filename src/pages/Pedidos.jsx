@@ -122,7 +122,7 @@ export default function Pedidos() {
         try {
             await axiosClient.post('/pedidos', {
                 mesaId: parseInt(nuevoPedido.mesaId),
-                meseroId: usuario.id || 1,
+                meseroId: usuario.id,
                 detalles: nuevoPedido.detalles.map(d => ({
                     productoId: d.productoId,
                     cantidad: d.cantidad,

@@ -26,8 +26,8 @@ export default function Login() {
             const response = await axiosClient.post('/auth/login', {
                 email, password
             });
-            const { token, nombre, rol } = response.data;
-            login({ nombre, email, rol }, token);
+            const { token, nombre, rol, id } = response.data;
+            login({ id, nombre, email, rol }, token);
             showToast(`Bienvenido, ${nombre}`, 'success');
             if (rol === 'ADMIN') navigate('/dashboard');
             else if (rol === 'MESERO') navigate('/pedidos');

@@ -70,6 +70,23 @@ export default function Menu() {
         }
     };
 
+    const subirImagen = async (productoId, file) => {
+    const formData = new FormData();
+    formData.append('imagen', file);
+    try {
+        const res = await axiosClient.post(
+            `/productos/${productoId}/imagen`,
+            formData,
+            { headers: { 'Content-Type': 'multipart/form-data' } }
+        );
+        showToast('Imagen subida correctamente', 'success');
+        cargarProductos();
+        return res.data.imagenUrl;
+    } catch {
+        showToast('Error al subir la imagen', 'error');
+    }
+};
+
     const cambiarDisponibilidad = async (id, disponible) => {
         try {
             await axiosClient.patch(
@@ -199,10 +216,18 @@ export default function Menu() {
                                 opacity: producto.disponible ? 1 : 0.55,
                             }}>
 
-                            {/* Emoji categoría */}
-                            <div style={styles.productoEmoji}>
-                                {cfg.emoji || '🍴'}
-                            </div>
+                            {/* Imagen o emoji */}
+<div style={styles.productoEmoji}>
+    {producto.imagenUrl ? (
+        <img
+            src={producto.imagenUrl}
+            alt={producto.nombre}
+            style={styles.productoImagen}
+        />
+    ) : (
+        cfg.emoji || '🍴'
+    )}
+</div>
 
                             {/* Info */}
                             <div style={styles.productoInfo}>
@@ -507,4 +532,27 @@ const styles = {
         alignItems: 'center',
         padding: 'var(--space-12)',
     },
+    productoImagen: {
+    width: '48px',
+    height: '48px',
+    borderRadius: 'var(--radius-md)',
+    objectFit: 'cover',
+},
+imagenBtn: {
+    flex: 1,
+    padding: '6px',
+    borderRadius: 'var(--radius-sm)',
+    border: '1px solid var(--color-primary)30',
+    backgroundColor: 'transparent',
+    color: 'var(--color-primary-light)',
+    fontSize: 'var(--text-xs)',
+    fontWeight: 'var(--font-medium)',
+    fontFamily: 'var(--font-sans)',
+    cursor: 'pointer',
+    textAlign: 'center',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '4px',
+    },  
 };

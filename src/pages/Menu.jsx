@@ -260,37 +260,51 @@ export default function Menu() {
                             </div>
 
                             {/* Acciones admin */}
-                            {usuario?.rol === 'ADMIN' && (
-                                <div style={styles.productoAcciones}>
-                                    <button
-                                        onClick={() => cambiarDisponibilidad(
-                                            producto.id, producto.disponible
-                                        )}
-                                        style={{
-                                            ...styles.accionBtn,
-                                            color: producto.disponible
-                                                ? 'var(--color-warning)'
-                                                : 'var(--color-success)',
-                                            borderColor: producto.disponible
-                                                ? 'var(--color-warning)30'
-                                                : 'var(--color-success)30',
-                                        }}>
-                                        {producto.disponible
-                                            ? 'Desactivar'
-                                            : 'Activar'}
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            eliminarProducto(producto.id)}
-                                        style={{
-                                            ...styles.accionBtn,
-                                            color: 'var(--text-muted)',
-                                            borderColor: 'var(--border-default)',
-                                        }}>
-                                        Eliminar
-                                    </button>
-                                </div>
-                            )}
+{usuario?.rol === 'ADMIN' && (
+    <div style={styles.productoAcciones}>
+        {/* Botón subir imagen */}
+        <label style={styles.imagenBtn}>
+            📷
+            <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={e => {
+                    if (e.target.files[0]) {
+                        subirImagen(
+                            producto.id,
+                            e.target.files[0]
+                        );
+                    }
+                }}
+            />
+        </label>
+        <button
+            onClick={() => cambiarDisponibilidad(
+                producto.id, producto.disponible
+            )}
+            style={{
+                ...styles.accionBtn,
+                color: producto.disponible
+                    ? 'var(--color-warning)'
+                    : 'var(--color-success)',
+                borderColor: producto.disponible
+                    ? 'var(--color-warning)30'
+                    : 'var(--color-success)30',
+            }}>
+            {producto.disponible ? 'Desactivar' : 'Activar'}
+        </button>
+        <button
+            onClick={() => eliminarProducto(producto.id)}
+            style={{
+                ...styles.accionBtn,
+                color: 'var(--text-muted)',
+                borderColor: 'var(--border-default)',
+            }}>
+            Eliminar
+        </button>
+    </div>
+)}
                         </Card>
                     );
                 })}

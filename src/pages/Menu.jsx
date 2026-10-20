@@ -480,9 +480,10 @@ const styles = {
         gap: 'var(--space-3)',
     },
     productoEmoji: {
-        fontSize: '32px',
-        lineHeight: 1,
-    },
+    fontSize: '32px',
+    lineHeight: 1,
+    width: '100%',
+},
     productoInfo: {
         display: 'flex',
         flexDirection: 'column',
@@ -547,8 +548,8 @@ const styles = {
         padding: 'var(--space-12)',
     },
     productoImagen: {
-    width: '48px',
-    height: '48px',
+    width: '100%',
+    height: '160px',
     borderRadius: 'var(--radius-md)',
     objectFit: 'cover',
 },
@@ -570,3 +571,5 @@ imagenBtn: {
     gap: '4px',
     },  
 };
+
+

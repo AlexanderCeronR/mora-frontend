@@ -7,7 +7,7 @@ import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { showToast } from '../components/ui/Toast';
-import { Plus, Search, UtensilsCrossed } from 'lucide-react';
+import { Plus, Search, UtensilsCrossed, ImagePlus } from 'lucide-react';
 import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/ui/PageTransition';
@@ -263,22 +263,20 @@ export default function Menu() {
 {usuario?.rol === 'ADMIN' && (
     <div style={styles.productoAcciones}>
         {/* Botón subir imagen */}
-        <label style={styles.imagenBtn}>
-            📷
-            <input
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={e => {
-                    if (e.target.files[0]) {
-                        subirImagen(
-                            producto.id,
-                            e.target.files[0]
-                        );
-                    }
-                }}
-            />
-        </label>
+<label style={styles.imagenBtn} title="Subir imagen">
+    <ImagePlus size={14} />
+    Imagen
+    <input
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={e => {
+            if (e.target.files[0]) {
+                subirImagen(producto.id, e.target.files[0]);
+            }
+        }}
+    />
+</label>
         <button
             onClick={() => cambiarDisponibilidad(
                 producto.id, producto.disponible

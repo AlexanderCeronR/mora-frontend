@@ -7,7 +7,10 @@ import Modal from '../components/ui/Modal';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import { showToast } from '../components/ui/Toast';
-import { Plus, Search, UtensilsCrossed, ImagePlus } from 'lucide-react';
+import {
+    Plus, Search, UtensilsCrossed, ImagePlus,
+    Salad, GlassWater, CakeSlice, Utensils
+} from 'lucide-react';
 import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/ui/PageTransition';
@@ -15,10 +18,10 @@ import PageTransition from '../components/ui/PageTransition';
 const categorias = ['PLATO FUERTE', 'ENTRADA', 'BEBIDA', 'POSTRE'];
 
 const categoriaConfig = {
-    'PLATO FUERTE': { emoji: '🍽️', badge: 'primary' },
-    'ENTRADA':      { emoji: '🥗', badge: 'accent' },
-    'BEBIDA':       { emoji: '🥤', badge: 'info' },
-    'POSTRE':       { emoji: '🍰', badge: 'warning' },
+    'PLATO FUERTE': { icon: UtensilsCrossed, badge: 'primary' },
+    'ENTRADA':      { icon: Salad,            badge: 'accent' },
+    'BEBIDA':       { icon: GlassWater,       badge: 'info' },
+    'POSTRE':       { icon: CakeSlice,        badge: 'warning' },
 };
 
 export default function Menu() {
@@ -71,21 +74,21 @@ export default function Menu() {
     };
 
     const subirImagen = async (productoId, file) => {
-    const formData = new FormData();
-    formData.append('imagen', file);
-    try {
-        const res = await axiosClient.post(
-            `/productos/${productoId}/imagen`,
-            formData,
-            { headers: { 'Content-Type': 'multipart/form-data' } }
-        );
-        showToast('Imagen subida correctamente', 'success');
-        cargarProductos();
-        return res.data.imagenUrl;
-    } catch {
-        showToast('Error al subir la imagen', 'error');
-    }
-};
+        const formData = new FormData();
+        formData.append('imagen', file);
+        try {
+            const res = await axiosClient.post(
+                `/productos/${productoId}/imagen`,
+                formData,
+                { headers: { 'Content-Type': 'multipart/form-data' } }
+            );
+            showToast('Imagen subida correctamente', 'success');
+            cargarProductos();
+            return res.data.imagenUrl;
+        } catch {
+            showToast('Error al subir la imagen', 'error');
+        }
+    };
 
     const cambiarDisponibilidad = async (id, disponible) => {
         try {
@@ -102,21 +105,21 @@ export default function Menu() {
         }
     };
 
-   const eliminarProducto = async (id) => {
-    const ok = await confirm({
-        titulo: '¿Eliminar producto?',
-        mensaje: 'Esta acción no se puede deshacer.',
-        variante: 'danger'
-    });
-    if (!ok) return;
-    try {
-        await axiosClient.delete(`/productos/${id}`);
-        showToast('Producto eliminado', 'success');
-        cargarProductos();
-    } catch {
-        showToast('Error al eliminar producto', 'error');
-    }
-};
+    const eliminarProducto = async (id) => {
+        const ok = await confirm({
+            titulo: '¿Eliminar producto?',
+            mensaje: 'Esta acción no se puede deshacer.',
+            variante: 'danger'
+        });
+        if (!ok) return;
+        try {
+            await axiosClient.delete(`/productos/${id}`);
+            showToast('Producto eliminado', 'success');
+            cargarProductos();
+        } catch {
+            showToast('Error al eliminar producto', 'error');
+        }
+    };
 
     const productosFiltrados = productos
         .filter(p => filtroCategoria === 'TODOS' ||
@@ -134,252 +137,266 @@ export default function Menu() {
     );
 
     return (
-    <PageTransition>
-        <div style={styles.container}>
-            {/* Top bar */}
-            <div style={styles.topBar}>
-                {/* Buscador */}
-                <div style={styles.searchWrap}>
-                    <Search
-                        size={16}
-                        color="var(--text-muted)"
-                        style={styles.searchIcon} />
-                    <input
-                        value={busqueda}
-                        onChange={e => setBusqueda(e.target.value)}
-                        placeholder="Buscar producto..."
-                        style={styles.searchInput}
-                        onFocus={e => {
-                            e.target.style.borderColor = 'var(--color-primary)';
-                        }}
-                        onBlur={e => {
-                            e.target.style.borderColor = 'var(--border-default)';
-                        }}
-                    />
+        <PageTransition>
+            <div style={styles.container}>
+                {/* Top bar */}
+                <div style={styles.topBar}>
+                    <div style={styles.searchWrap}>
+                        <Search
+                            size={16}
+                            color="var(--text-muted)"
+                            style={styles.searchIcon} />
+                        <input
+                            value={busqueda}
+                            onChange={e => setBusqueda(e.target.value)}
+                            placeholder="Buscar producto..."
+                            style={styles.searchInput}
+                            onFocus={e => {
+                                e.target.style.borderColor = 'var(--color-primary)';
+                            }}
+                            onBlur={e => {
+                                e.target.style.borderColor = 'var(--border-default)';
+                            }}
+                        />
+                    </div>
+
+                    {usuario?.rol === 'ADMIN' && (
+                        <Button
+                            onClick={() => setModalCrear(true)}
+                            variant="primary"
+                            size="sm">
+                            <Plus size={15} />
+                            Nuevo Producto
+                        </Button>
+                    )}
                 </div>
 
-                {usuario?.rol === 'ADMIN' && (
-                    <Button
-                        onClick={() => setModalCrear(true)}
-                        variant="primary"
-                        size="sm">
-                        <Plus size={15} />
-                        Nuevo Producto
-                    </Button>
-                )}
-            </div>
+                {/* Tabs de categorías */}
+                <div style={styles.tabs}>
+                    <button
+                        onClick={() => setFiltroCategoria('TODOS')}
+                        style={{
+                            ...styles.tab,
+                            ...(filtroCategoria === 'TODOS'
+                                ? styles.tabActive : {})
+                        }}>
+                        Todos
+                        <span style={styles.tabCount}>
+                            {productos.length}
+                        </span>
+                    </button>
+                    {categorias.map(cat => {
+                        const cfg = categoriaConfig[cat];
+                        const Icon = cfg.icon;
+                        return (
+                            <button
+                                key={cat}
+                                onClick={() => setFiltroCategoria(cat)}
+                                style={{
+                                    ...styles.tab,
+                                    ...(filtroCategoria === cat
+                                        ? styles.tabActive : {})
+                                }}>
+                                <Icon size={15} />
+                                {cat.charAt(0) + cat.slice(1).toLowerCase()}
+                                <span style={styles.tabCount}>
+                                    {conteoCategoria(cat)}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
 
-            {/* Tabs de categorías */}
-            <div style={styles.tabs}>
-                <button
-                    onClick={() => setFiltroCategoria('TODOS')}
-                    style={{
-                        ...styles.tab,
-                        ...(filtroCategoria === 'TODOS'
-                            ? styles.tabActive : {})
-                    }}>
-                    Todos
-                    <span style={styles.tabCount}>
-                        {productos.length}
-                    </span>
-                </button>
-                {categorias.map(cat => {
-                    const cfg = categoriaConfig[cat];
-                    return (
-                        <button
-                            key={cat}
-                            onClick={() => setFiltroCategoria(cat)}
-                            style={{
-                                ...styles.tab,
-                                ...(filtroCategoria === cat
-                                    ? styles.tabActive : {})
-                            }}>
-                            {cfg.emoji} {cat.charAt(0) +
-                                cat.slice(1).toLowerCase()}
-                            <span style={styles.tabCount}>
-                                {conteoCategoria(cat)}
-                            </span>
-                        </button>
-                    );
-                })}
-            </div>
+                {/* Grid de productos */}
+                <div style={styles.grid}>
+                    {productosFiltrados.map(producto => {
+                        const cfg = categoriaConfig[producto.categoria] || {};
+                        const CatIcon = cfg.icon || Utensils;
+                        return (
+                            <Card
+                                key={producto.id}
+                                style={{
+                                    ...styles.productoCard,
+                                    opacity: producto.disponible ? 1 : 0.55,
+                                }}>
 
-            {/* Grid de productos */}
-            <div style={styles.grid}>
-                {productosFiltrados.map(producto => {
-                    const cfg = categoriaConfig[producto.categoria] || {};
-                    return (
-                        <Card
-                            key={producto.id}
-                            style={{
-                                ...styles.productoCard,
-                                opacity: producto.disponible ? 1 : 0.55,
-                            }}>
-
-                            {/* Imagen o emoji */}
-<div style={styles.productoEmoji}>
-    {producto.imagenUrl ? (
-        <img
-            src={producto.imagenUrl}
-            alt={producto.nombre}
-            style={styles.productoImagen}
-        />
-    ) : (
-        cfg.emoji || '🍴'
-    )}
-</div>
-
-                            {/* Info */}
-                            <div style={styles.productoInfo}>
-                                <div style={styles.productoHeader}>
-                                    <h3 style={styles.productoNombre}>
-                                        {producto.nombre}
-                                    </h3>
-                                    <Badge variant={producto.disponible
-                                        ? 'success' : 'danger'}>
-                                        {producto.disponible
-                                            ? 'Disponible'
-                                            : 'No disponible'}
-                                    </Badge>
+                                {/* Imagen o ícono */}
+                                <div style={styles.productoEmoji}>
+                                    {producto.imagenUrl ? (
+                                        <img
+                                            src={producto.imagenUrl}
+                                            alt={producto.nombre}
+                                            style={styles.productoImagen}
+                                        />
+                                    ) : (
+                                        <div style={styles.iconoPlaceholder}>
+                                            <CatIcon
+                                                size={28}
+                                                color="var(--color-primary-light)" />
+                                        </div>
+                                    )}
                                 </div>
 
-                                {producto.descripcion && (
-                                    <p style={styles.productoDesc}>
-                                        {producto.descripcion}
-                                    </p>
+                                {/* Info */}
+                                <div style={styles.productoInfo}>
+                                    <div style={styles.productoHeader}>
+                                        <h3 style={styles.productoNombre}>
+                                            {producto.nombre}
+                                        </h3>
+                                        <Badge variant={producto.disponible
+                                            ? 'success' : 'danger'}>
+                                            {producto.disponible
+                                                ? 'Disponible'
+                                                : 'No disponible'}
+                                        </Badge>
+                                    </div>
+
+                                    {producto.descripcion && (
+                                        <p style={styles.productoDesc}>
+                                            {producto.descripcion}
+                                        </p>
+                                    )}
+
+                                    <div style={styles.productoFooter}>
+                                        <Badge variant={cfg.badge || 'default'}>
+                                            {producto.categoria}
+                                        </Badge>
+                                        <span style={styles.productoPrecio}>
+                                            ${producto.precio?.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Acciones admin */}
+                                {usuario?.rol === 'ADMIN' && (
+                                    <div style={styles.productoAcciones}>
+                                        <label
+                                            style={styles.imagenBtn}
+                                            title="Subir imagen">
+                                            <ImagePlus size={14} />
+                                            Imagen
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                style={{ display: 'none' }}
+                                                onChange={e => {
+                                                    if (e.target.files[0]) {
+                                                        subirImagen(
+                                                            producto.id,
+                                                            e.target.files[0]
+                                                        );
+                                                    }
+                                                }}
+                                            />
+                                        </label>
+                                        <button
+                                            onClick={() => cambiarDisponibilidad(
+                                                producto.id, producto.disponible
+                                            )}
+                                            style={{
+                                                ...styles.accionBtn,
+                                                color: producto.disponible
+                                                    ? 'var(--color-warning)'
+                                                    : 'var(--color-success)',
+                                                borderColor: producto.disponible
+                                                    ? 'var(--color-warning)30'
+                                                    : 'var(--color-success)30',
+                                            }}>
+                                            {producto.disponible
+                                                ? 'Desactivar' : 'Activar'}
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                eliminarProducto(producto.id)}
+                                            style={{
+                                                ...styles.accionBtn,
+                                                color: 'var(--text-muted)',
+                                                borderColor: 'var(--border-default)',
+                                            }}>
+                                            Eliminar
+                                        </button>
+                                    </div>
                                 )}
+                            </Card>
+                        );
+                    })}
 
-                                <div style={styles.productoFooter}>
-                                    <Badge variant={cfg.badge || 'default'}>
-                                        {producto.categoria}
-                                    </Badge>
-                                    <span style={styles.productoPrecio}>
-                                        ${producto.precio?.toLocaleString()}
-                                    </span>
-                                </div>
-                            </div>
+                    {productosFiltrados.length === 0 && (
+                        <div style={styles.vacio}>
+                            <UtensilsCrossed
+                                size={40}
+                                color="var(--text-disabled)" />
+                            <p style={{
+                                color: 'var(--text-muted)',
+                                marginTop: '12px'
+                            }}>
+                                No hay productos
+                                {busqueda ? ` con "${busqueda}"` : ''}
+                            </p>
+                        </div>
+                    )}
+                </div>
 
-                            {/* Acciones admin */}
-{usuario?.rol === 'ADMIN' && (
-    <div style={styles.productoAcciones}>
-        {/* Botón subir imagen */}
-<label style={styles.imagenBtn} title="Subir imagen">
-    <ImagePlus size={14} />
-    Imagen
-    <input
-        type="file"
-        accept="image/*"
-        style={{ display: 'none' }}
-        onChange={e => {
-            if (e.target.files[0]) {
-                subirImagen(producto.id, e.target.files[0]);
-            }
-        }}
-    />
-</label>
-        <button
-            onClick={() => cambiarDisponibilidad(
-                producto.id, producto.disponible
-            )}
-            style={{
-                ...styles.accionBtn,
-                color: producto.disponible
-                    ? 'var(--color-warning)'
-                    : 'var(--color-success)',
-                borderColor: producto.disponible
-                    ? 'var(--color-warning)30'
-                    : 'var(--color-success)30',
-            }}>
-            {producto.disponible ? 'Desactivar' : 'Activar'}
-        </button>
-        <button
-            onClick={() => eliminarProducto(producto.id)}
-            style={{
-                ...styles.accionBtn,
-                color: 'var(--text-muted)',
-                borderColor: 'var(--border-default)',
-            }}>
-            Eliminar
-        </button>
-    </div>
-)}
-                        </Card>
-                    );
-                })}
-
-                {productosFiltrados.length === 0 && (
-                    <div style={styles.vacio}>
-                        <UtensilsCrossed
-                            size={40}
-                            color="var(--text-disabled)" />
-                        <p style={{ color: 'var(--text-muted)', marginTop: '12px' }}>
-                            No hay productos
-                            {busqueda ? ` con "${busqueda}"` : ''}
-                        </p>
-                    </div>
+                {/* Modal crear */}
+                {modalCrear && (
+                    <Modal
+                        title="Nuevo Producto"
+                        onClose={() => setModalCrear(false)}
+                        footer={
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setModalCrear(false)}>
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    onClick={crearProducto}>
+                                    Crear Producto
+                                </Button>
+                            </>
+                        }>
+                        <Input
+                            label="Nombre"
+                            value={nuevoProducto.nombre}
+                            onChange={e => setNuevoProducto({
+                                ...nuevoProducto, nombre: e.target.value
+                            })}
+                            placeholder="Ej: Hamburguesa Clásica"
+                        />
+                        <Input
+                            label="Descripción"
+                            value={nuevoProducto.descripcion}
+                            onChange={e => setNuevoProducto({
+                                ...nuevoProducto, descripcion: e.target.value
+                            })}
+                            placeholder="Ingredientes o descripción..."
+                        />
+                        <Input
+                            label="Precio"
+                            type="number"
+                            value={nuevoProducto.precio}
+                            onChange={e => setNuevoProducto({
+                                ...nuevoProducto, precio: e.target.value
+                            })}
+                            placeholder="Ej: 25000"
+                        />
+                        <Select
+                            label="Categoría"
+                            value={nuevoProducto.categoria}
+                            onChange={e => setNuevoProducto({
+                                ...nuevoProducto, categoria: e.target.value
+                            })}
+                            options={categorias.map(c => ({
+                                value: c, label: c
+                            }))}
+                        />
+                    </Modal>
                 )}
             </div>
-
-            {/* Modal crear */}
-            {modalCrear && (
-                <Modal
-                    title="Nuevo Producto"
-                    onClose={() => setModalCrear(false)}
-                    footer={
-                        <>
-                            <Button
-                                variant="ghost"
-                                onClick={() => setModalCrear(false)}>
-                                Cancelar
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={crearProducto}>
-                                Crear Producto
-                            </Button>
-                        </>
-                    }>
-                    <Input
-                        label="Nombre"
-                        value={nuevoProducto.nombre}
-                        onChange={e => setNuevoProducto({
-                            ...nuevoProducto, nombre: e.target.value
-                        })}
-                        placeholder="Ej: Hamburguesa Clásica"
-                    />
-                    <Input
-                        label="Descripción"
-                        value={nuevoProducto.descripcion}
-                        onChange={e => setNuevoProducto({
-                            ...nuevoProducto, descripcion: e.target.value
-                        })}
-                        placeholder="Ingredientes o descripción..."
-                    />
-                    <Input
-                        label="Precio"
-                        type="number"
-                        value={nuevoProducto.precio}
-                        onChange={e => setNuevoProducto({
-                            ...nuevoProducto, precio: e.target.value
-                        })}
-                        placeholder="Ej: 25000"
-                    />
-                    <Select
-                        label="Categoría"
-                        value={nuevoProducto.categoria}
-                        onChange={e => setNuevoProducto({
-                            ...nuevoProducto, categoria: e.target.value
-                        })}
-                        options={categorias.map(c => ({
-                            value: c, label: c
-                        }))}
-                    />
-                </Modal>
-            )}
-        </div>
-        {config && <Confirm {...config} />}
-    </PageTransition>
-);
+            {config && <Confirm {...config} />}
+        </PageTransition>
+    );
 }
 
 const styles = {
@@ -452,7 +469,9 @@ const styles = {
         fontWeight: 'var(--font-medium)',
         fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
-        borderBottom: '2px solid transparent',
+        borderBottomWidth: '2px',
+        borderBottomStyle: 'solid',
+        borderBottomColor: 'transparent',
         marginBottom: '-1px',
         transition: 'all var(--transition-fast)',
     },
@@ -478,10 +497,18 @@ const styles = {
         gap: 'var(--space-3)',
     },
     productoEmoji: {
-    fontSize: '32px',
-    lineHeight: 1,
-    width: '100%',
-},
+        width: '100%',
+    },
+    iconoPlaceholder: {
+        width: '100%',
+        height: '160px',
+        borderRadius: 'var(--radius-md)',
+        backgroundColor: 'var(--bg-elevated)',
+        border: '1px solid var(--border-subtle)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     productoInfo: {
         display: 'flex',
         flexDirection: 'column',
@@ -546,28 +573,26 @@ const styles = {
         padding: 'var(--space-12)',
     },
     productoImagen: {
-    width: '100%',
-    height: '160px',
-    borderRadius: 'var(--radius-md)',
-    objectFit: 'cover',
-},
-imagenBtn: {
-    flex: 1,
-    padding: '6px',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--color-primary)30',
-    backgroundColor: 'transparent',
-    color: 'var(--color-primary-light)',
-    fontSize: 'var(--text-xs)',
-    fontWeight: 'var(--font-medium)',
-    fontFamily: 'var(--font-sans)',
-    cursor: 'pointer',
-    textAlign: 'center',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '4px',
-    },  
+        width: '100%',
+        height: '160px',
+        borderRadius: 'var(--radius-md)',
+        objectFit: 'cover',
+    },
+    imagenBtn: {
+        flex: 1,
+        padding: '6px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--color-primary)30',
+        backgroundColor: 'transparent',
+        color: 'var(--color-primary-light)',
+        fontSize: 'var(--text-xs)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px',
+    },
 };
-
-

@@ -214,8 +214,16 @@ export default function ClienteMenu() {
                             return (
                                 <div key={producto.id} style={styles.productoCard}>
                                     <div style={styles.productoEmoji}>
-                                        {categoriaEmoji[producto.categoria] || '🍴'}
-                                    </div>
+    {producto.imagenUrl ? (
+        <img
+            src={producto.imagenUrl}
+            alt={producto.nombre}
+            style={styles.productoImagen}
+        />
+    ) : (
+        categoriaEmoji[producto.categoria] || '🍴'
+    )}
+</div>
                                     <div style={styles.productoInfo}>
                                         <p style={styles.productoNombre}>
                                             {producto.nombre}
@@ -951,4 +959,10 @@ const styles = {
         fontSize: '11px',
         color: '#404060',
     },
+    productoImagen: {
+    width: '64px',
+    height: '64px',
+    borderRadius: '10px',
+    objectFit: 'cover',
+},
 };

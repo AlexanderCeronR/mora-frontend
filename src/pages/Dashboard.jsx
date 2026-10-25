@@ -2,20 +2,27 @@ import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import PageTransition from '../components/ui/PageTransition';
+import { SkeletonCard } from '../components/ui/Skeleton';
 import { showToast } from '../components/ui/Toast';
 import {
-    TrendingUp, ShoppingBag, CreditCard,
-    Receipt, Send, Sparkles
+    TrendingUp, ShoppingBag, CreditCard, Receipt,
+    Send, Sparkles, Trophy, PieChart as PieChartIcon, Wallet
 } from 'lucide-react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, PieChart, Pie, Cell,
     ResponsiveContainer, Legend
 } from 'recharts';
-import Skeleton, { SkeletonCard } from '../components/ui/Skeleton';
-import PageTransition from '../components/ui/PageTransition';
 
-const COLORES = ['#443199', '#792CA2', '#C13383', '#E05454', '#f59e0b'];
+// Color base y color claro (para el brillo)
+const PALETA = [
+    { base: '#443199', light: '#8b73f0' },
+    { base: '#792CA2', light: '#c067ea' },
+    { base: '#C13383', light: '#f777b6' },
+    { base: '#E05454', light: '#ff9494' },
+    { base: '#f59e0b', light: '#fde047' },
+];
 
 const TooltipEstilo = {
     contentStyle: {
@@ -24,8 +31,45 @@ const TooltipEstilo = {
         borderRadius: '10px',
         color: 'var(--text-primary)',
         fontSize: '13px',
-    }
+        boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+    },
+    itemStyle: { color: 'var(--text-primary)' },
 };
+
+// Degradados tipo cilindro para las barras (efecto 3D)
+const defsBarras = () => (
+    <defs>
+        {PALETA.map((c, i) => (
+            <linearGradient
+                key={i}
+                id={`barra-${i}`}
+                x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor={c.base} />
+                <stop offset="35%" stopColor={c.light} />
+                <stop offset="100%" stopColor={c.base} />
+            </linearGradient>
+        ))}
+    </defs>
+);
+
+// Degradados radiales tipo esfera con brillo para las tortas
+const defsTorta = (prefijo) => (
+    <defs>
+        {PALETA.map((c, i) => (
+            <radialGradient
+                key={i}
+                id={`${prefijo}-${i}`}
+                cx="50%" cy="50%" r="75%" fx="30%" fy="25%">
+                <stop offset="0%" stopColor={c.light} />
+                <stop offset="100%" stopColor={c.base} />
+            </radialGradient>
+        ))}
+    </defs>
+);
+
+const sombra = (color) => ({
+    filter: `drop-shadow(0 6px 8px ${color}66)`,
+});
 
 export default function Dashboard() {
     const [datos, setDatos] = useState(null);
@@ -108,21 +152,21 @@ export default function Dashboard() {
             label: 'Total Ventas',
             valor: `$${datos?.totalVentas?.toLocaleString() || 0}`,
             icon: TrendingUp,
-            color: '#443199',
+            color: '#8b73f0',
             gradient: 'var(--gradient-primary)',
         },
         {
             label: 'Total Pedidos',
             valor: datos?.totalPedidos || 0,
             icon: ShoppingBag,
-            color: '#792CA2',
+            color: '#c067ea',
             gradient: 'var(--gradient-accent)',
         },
         {
             label: 'Pagos Registrados',
             valor: datos?.totalPagos || 0,
             icon: CreditCard,
-            color: '#C13383',
+            color: '#f777b6',
             gradient: 'linear-gradient(135deg, #C13383, #E05454)',
         },
         {
@@ -132,7 +176,7 @@ export default function Dashboard() {
                     .toLocaleString()
                 : 0}`,
             icon: Receipt,
-            color: '#E05454',
+            color: '#ff9494',
             gradient: 'linear-gradient(135deg, #E05454, #f59e0b)',
         },
     ];
@@ -145,227 +189,284 @@ export default function Dashboard() {
     ];
 
     if (loading) return (
-    <div style={styles.container}>
-        <div style={styles.kpiGrid}>
-            {[1,2,3,4].map(i => (
-                <SkeletonCard key={i} lines={1} />
-            ))}
-        </div>
-        <div style={styles.graficasGrid}>
-            {[1,2,3].map(i => (
-                <SkeletonCard key={i} lines={4} />
-            ))}
-        </div>
-    </div>
-);
-
-return (
-    <PageTransition>
         <div style={styles.container}>
-            {/* KPIs */}
             <div style={styles.kpiGrid}>
-                {kpis.map((kpi, i) => {
-                    const Icon = kpi.icon;
-                    return (
-                        <Card key={i} style={styles.kpiCard}>
-                            <div style={styles.kpiTop}>
-                                <div style={{
-                                    ...styles.kpiIcon,
-                                    background: kpi.gradient,
-                                }}>
-                                    <Icon size={18} color="white" />
-                                </div>
-                                <span style={styles.kpiLabel}>
-                                    {kpi.label}
-                                </span>
-                            </div>
-                            <p style={{
-                                ...styles.kpiValor,
-                                color: kpi.color,
-                            }}>
-                                {kpi.valor}
-                            </p>
-                        </Card>
-                    );
-                })}
+                {[1, 2, 3, 4].map(i => (
+                    <SkeletonCard key={i} lines={1} />
+                ))}
             </div>
-
-            {/* Gráficas */}
             <div style={styles.graficasGrid}>
+                {[1, 2, 3].map(i => (
+                    <SkeletonCard key={i} lines={4} />
+                ))}
+            </div>
+        </div>
+    );
 
-                {/* Productos más vendidos */}
-                <Card style={styles.graficaCard}>
-                    <h3 style={styles.graficaTitulo}>
-                        🏆 Productos más vendidos
-                    </h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={datosProductos}
-                            margin={{ top: 5, right: 10, left: -20, bottom: 40 }}>
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                                stroke="var(--border-subtle)" />
-                            <XAxis
-                                dataKey="nombre"
-                                tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                                angle={-25}
-                                textAnchor="end" />
-                            <YAxis
-                                tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                            <Tooltip {...TooltipEstilo} />
-                            <Bar dataKey="cantidad" radius={[6, 6, 0, 0]}>
-                                {datosProductos.map((_, i) => (
-                                    <Cell
-                                        key={i}
-                                        fill={COLORES[i % COLORES.length]} />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </Card>
+    return (
+        <PageTransition>
+            <div style={styles.container}>
 
-                {/* Ventas por categoría */}
-                <Card style={styles.graficaCard}>
-                    <h3 style={styles.graficaTitulo}>
-                        📊 Ventas por categoría
-                    </h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                            <Pie
-                                data={datosCategorias}
-                                dataKey="total"
-                                nameKey="categoria"
-                                cx="50%"
-                                cy="45%"
-                                outerRadius={75}
-                                label={({ categoria, percent }) =>
-                                    `${categoria} ${(percent * 100).toFixed(0)}%`
-                                }
-                                labelLine={{ stroke: 'var(--text-muted)' }}>
-                                {datosCategorias.map((_, i) => (
-                                    <Cell key={i}
-                                        fill={COLORES[i % COLORES.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip
-                                formatter={v => `$${v.toLocaleString()}`}
-                                {...TooltipEstilo} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </Card>
-
-                {/* Métodos de pago */}
-                <Card style={styles.graficaCard}>
-                    <h3 style={styles.graficaTitulo}>
-                        💳 Métodos de pago
-                    </h3>
-                    <ResponsiveContainer width="100%" height={220}>
-                        <PieChart>
-                            <Pie
-                                data={datosMetodos}
-                                dataKey="cantidad"
-                                nameKey="metodo"
-                                cx="50%"
-                                cy="45%"
-                                outerRadius={75}>
-                                {datosMetodos.map((_, i) => (
-                                    <Cell key={i}
-                                        fill={COLORES[i % COLORES.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip {...TooltipEstilo} />
-                            <Legend
-                                formatter={v => (
-                                    <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                                        {v}
+                {/* KPIs */}
+                <div style={styles.kpiGrid}>
+                    {kpis.map((kpi, i) => {
+                        const Icon = kpi.icon;
+                        return (
+                            <Card key={i} style={styles.kpiCard}>
+                                <div style={styles.kpiTop}>
+                                    <div style={{
+                                        ...styles.kpiIcon,
+                                        background: kpi.gradient,
+                                    }}>
+                                        <Icon size={18} color="white" />
+                                    </div>
+                                    <span style={styles.kpiLabel}>
+                                        {kpi.label}
                                     </span>
-                                )} />
-                        </PieChart>
-                    </ResponsiveContainer>
+                                </div>
+                                <p style={{
+                                    ...styles.kpiValor,
+                                    color: kpi.color,
+                                }}>
+                                    {kpi.valor}
+                                </p>
+                            </Card>
+                        );
+                    })}
+                </div>
+
+                {/* Gráficas */}
+                <div style={styles.graficasGrid}>
+
+                    {/* Productos más vendidos */}
+                    <Card style={styles.graficaCard}>
+                        <div style={styles.graficaHeader}>
+                            <div style={{
+                                ...styles.graficaIcono,
+                                background: 'var(--gradient-primary)'
+                            }}>
+                                <Trophy size={15} color="white" />
+                            </div>
+                            <h3 style={styles.graficaTitulo}>
+                                Productos más vendidos
+                            </h3>
+                        </div>
+                        <ResponsiveContainer width="100%" height={230}>
+                            <BarChart
+                                data={datosProductos}
+                                barCategoryGap="22%"
+                                margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                                {defsBarras()}
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                    stroke="var(--border-subtle)"
+                                    vertical={false} />
+                                <XAxis
+                                    dataKey="nombre"
+                                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                                    angle={-25}
+                                    textAnchor="end"
+                                    axisLine={false}
+                                    tickLine={false} />
+                                <YAxis
+                                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                                    axisLine={false}
+                                    tickLine={false} />
+                                <Tooltip
+                                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                                    {...TooltipEstilo} />
+                                <Bar
+                                    dataKey="cantidad"
+                                    radius={[8, 8, 0, 0]}>
+                                    {datosProductos.map((_, i) => (
+                                        <Cell
+                                            key={i}
+                                            fill={`url(#barra-${i % PALETA.length})`}
+                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </Card>
+
+                    {/* Ventas por categoría */}
+                    <Card style={styles.graficaCard}>
+                        <div style={styles.graficaHeader}>
+                            <div style={{
+                                ...styles.graficaIcono,
+                                background: 'var(--gradient-accent)'
+                            }}>
+                                <PieChartIcon size={15} color="white" />
+                            </div>
+                            <h3 style={styles.graficaTitulo}>
+                                Ventas por categoría
+                            </h3>
+                        </div>
+                        <ResponsiveContainer width="100%" height={230}>
+                            <PieChart>
+                                {defsTorta('cat')}
+                                <Pie
+                                    data={datosCategorias}
+                                    dataKey="total"
+                                    nameKey="categoria"
+                                    cx="50%"
+                                    cy="45%"
+                                    innerRadius={48}
+                                    outerRadius={82}
+                                    paddingAngle={4}
+                                    cornerRadius={6}
+                                    stroke="none">
+                                    {datosCategorias.map((_, i) => (
+                                        <Cell
+                                            key={i}
+                                            fill={`url(#cat-${i % PALETA.length})`}
+                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                    ))}
+                                </Pie>
+                                <Tooltip
+                                    formatter={v => `$${v.toLocaleString()}`}
+                                    {...TooltipEstilo} />
+                                <Legend
+                                    iconType="circle"
+                                    formatter={v => (
+                                        <span style={{
+                                            color: 'var(--text-secondary)',
+                                            fontSize: 12
+                                        }}>
+                                            {v}
+                                        </span>
+                                    )} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </Card>
+
+                    {/* Métodos de pago */}
+                    <Card style={styles.graficaCard}>
+                        <div style={styles.graficaHeader}>
+                            <div style={{
+                                ...styles.graficaIcono,
+                                background: 'linear-gradient(135deg, #C13383, #E05454)'
+                            }}>
+                                <Wallet size={15} color="white" />
+                            </div>
+                            <h3 style={styles.graficaTitulo}>
+                                Métodos de pago
+                            </h3>
+                        </div>
+                        <ResponsiveContainer width="100%" height={230}>
+                            <PieChart>
+                                {defsTorta('met')}
+                                <Pie
+                                    data={datosMetodos}
+                                    dataKey="cantidad"
+                                    nameKey="metodo"
+                                    cx="50%"
+                                    cy="45%"
+                                    innerRadius={48}
+                                    outerRadius={82}
+                                    paddingAngle={4}
+                                    cornerRadius={6}
+                                    stroke="none">
+                                    {datosMetodos.map((_, i) => (
+                                        <Cell
+                                            key={i}
+                                            fill={`url(#met-${i % PALETA.length})`}
+                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                    ))}
+                                </Pie>
+                                <Tooltip {...TooltipEstilo} />
+                                <Legend
+                                    iconType="circle"
+                                    formatter={v => (
+                                        <span style={{
+                                            color: 'var(--text-secondary)',
+                                            fontSize: 12
+                                        }}>
+                                            {v}
+                                        </span>
+                                    )} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </Card>
+                </div>
+
+                {/* Panel IA */}
+                <Card style={styles.iaCard}>
+                    <div style={styles.iaHeader}>
+                        <div style={styles.iaIconWrap}>
+                            <Sparkles size={18} color="white" />
+                        </div>
+                        <div>
+                            <h3 style={styles.iaTitulo}>
+                                Asistente IA — Análisis de MORA
+                            </h3>
+                            <p style={styles.iaSub}>
+                                Pregúntale al asistente sobre ventas y rendimiento
+                            </p>
+                        </div>
+                    </div>
+
+                    <div style={styles.sugerencias}>
+                        {sugerencias.map(s => (
+                            <button
+                                key={s}
+                                onClick={() => setPreguntaIA(s)}
+                                style={styles.sugerenciaBtn}
+                                onMouseEnter={e => {
+                                    e.currentTarget.style.borderColor =
+                                        'var(--color-primary)';
+                                    e.currentTarget.style.color =
+                                        'var(--text-primary)';
+                                }}
+                                onMouseLeave={e => {
+                                    e.currentTarget.style.borderColor =
+                                        'var(--border-default)';
+                                    e.currentTarget.style.color =
+                                        'var(--text-muted)';
+                                }}>
+                                {s}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div style={styles.iaInputRow}>
+                        <input
+                            value={preguntaIA}
+                            onChange={e => setPreguntaIA(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && preguntarIA()}
+                            placeholder="Escribe tu pregunta sobre las ventas..."
+                            style={styles.iaInput}
+                            onFocus={e => {
+                                e.target.style.borderColor = 'var(--color-primary)';
+                                e.target.style.boxShadow =
+                                    '0 0 0 3px rgba(68,49,153,0.15)';
+                            }}
+                            onBlur={e => {
+                                e.target.style.borderColor = 'var(--border-default)';
+                                e.target.style.boxShadow = 'none';
+                            }}
+                        />
+                        <Button
+                            onClick={preguntarIA}
+                            disabled={loadingIA}
+                            variant="primary">
+                            <Send size={15} />
+                            {loadingIA ? 'Analizando...' : 'Preguntar'}
+                        </Button>
+                    </div>
+
+                    {respuestaIA && (
+                        <div style={styles.respuesta}>
+                            <div style={styles.respuestaIcon}>
+                                <Sparkles size={14} color="white" />
+                            </div>
+                            <p style={styles.respuestaTexto}>{respuestaIA}</p>
+                        </div>
+                    )}
                 </Card>
             </div>
-
-            {/* Panel IA */}
-            <Card style={styles.iaCard}>
-                <div style={styles.iaHeader}>
-                    <div style={styles.iaIconWrap}>
-                        <Sparkles size={18} color="white" />
-                    </div>
-                    <div>
-                        <h3 style={styles.iaTitulo}>
-                            Asistente IA — Análisis de MORA
-                        </h3>
-                        <p style={styles.iaSub}>
-                            Pregúntale al asistente sobre ventas y rendimiento
-                        </p>
-                    </div>
-                </div>
-
-                {/* Sugerencias */}
-                <div style={styles.sugerencias}>
-                    {sugerencias.map(s => (
-                        <button
-                            key={s}
-                            onClick={() => setPreguntaIA(s)}
-                            style={styles.sugerenciaBtn}
-                            onMouseEnter={e => {
-                                e.currentTarget.style.borderColor =
-                                    'var(--color-primary)';
-                                e.currentTarget.style.color =
-                                    'var(--text-primary)';
-                            }}
-                            onMouseLeave={e => {
-                                e.currentTarget.style.borderColor =
-                                    'var(--border-default)';
-                                e.currentTarget.style.color =
-                                    'var(--text-muted)';
-                            }}>
-                            {s}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Input */}
-                <div style={styles.iaInputRow}>
-                    <input
-                        value={preguntaIA}
-                        onChange={e => setPreguntaIA(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && preguntarIA()}
-                        placeholder="Escribe tu pregunta sobre las ventas..."
-                        style={styles.iaInput}
-                        onFocus={e => {
-                            e.target.style.borderColor = 'var(--color-primary)';
-                            e.target.style.boxShadow =
-                                '0 0 0 3px rgba(68,49,153,0.15)';
-                        }}
-                        onBlur={e => {
-                            e.target.style.borderColor = 'var(--border-default)';
-                            e.target.style.boxShadow = 'none';
-                        }}
-                    />
-                    <Button
-                        onClick={preguntarIA}
-                        disabled={loadingIA}
-                        variant="primary">
-                        <Send size={15} />
-                        {loadingIA ? 'Analizando...' : 'Preguntar'}
-                    </Button>
-                </div>
-
-                {/* Respuesta */}
-                {respuestaIA && (
-                    <div style={styles.respuesta}>
-                        <div style={styles.respuestaIcon}>
-                            <Sparkles size={14} color="white" />
-                        </div>
-                        <p style={styles.respuestaTexto}>{respuestaIA}</p>
-                    </div>
-                )}
-            </Card>
-        </div>
-    </PageTransition>
-);
-
-
+        </PageTransition>
+    );
 }
 
 const styles = {
@@ -373,21 +474,6 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-6)',
-    },
-    loading: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '400px',
-    },
-    loadingSpinner: {
-        width: '36px',
-        height: '36px',
-        border: '3px solid var(--border-default)',
-        borderTop: '3px solid var(--color-primary)',
-        borderRadius: '50%',
-        animation: 'spin 0.8s linear infinite',
     },
     kpiGrid: {
         display: 'grid',
@@ -433,6 +519,21 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-4)',
+    },
+    graficaHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+    },
+    graficaIcono: {
+        width: '30px',
+        height: '30px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        boxShadow: '0 4px 12px rgba(121,44,162,0.35)',
     },
     graficaTitulo: {
         fontSize: 'var(--text-base)',

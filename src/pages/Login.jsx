@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axiosClient from '../api/axiosClient';
 import { showToast } from '../components/ui/Toast';
-import { LogIn, Eye, EyeOff, Home } from 'lucide-react';
+import { LogIn, Eye, EyeOff } from 'lucide-react';
 import PageTransition from '../components/ui/PageTransition';
 import ThemeSwitch from '../components/ui/ThemeSwitch';
 
@@ -87,13 +87,6 @@ export default function Login() {
                 <div style={styles.themeCorner}>
                                 <ThemeSwitch />
                 </div>
-<button
-    onClick={() => navigate('/')}
-    className="btn-3d"
-    style={styles.homeCorner}>
-    <Home size={15} />
-    Inicio
-</button>
                 <div style={styles.formWrap}>
                     <div style={styles.formHeader}>
                         <h2 style={styles.formTitle}>Iniciar sesión</h2>
@@ -416,9 +409,4 @@ const styles = {
         top: '20px',
         right: '20px',
     },
-homeCorner: {
-    position: 'absolute',
-    top: '20px',
-    left: '20px',
-},
 };

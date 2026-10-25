@@ -242,7 +242,7 @@ return (
 <div style={styles.qrWrap}>
     <QRCodeSVG
         value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
-        size={80}
+        size={130}
         bgColor="transparent"
         fgColor="#f0f0ff"
         level="M"
@@ -391,7 +391,7 @@ const styles = {
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
         gap: 'var(--space-4)',
     },
     mesaCard: {
@@ -455,5 +455,25 @@ const styles = {
         gridColumn: '1 / -1',
         textAlign: 'center',
         padding: 'var(--space-12)',
+    },
+    qrWrap: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: 'var(--space-4)',
+        margin: '0 auto',
+        width: '100%',
+        boxSizing: 'border-box',
+        backgroundColor: 'var(--bg-elevated)',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+    },
+    qrLabel: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+        margin: 0,
+        textAlign: 'center',
     },
 };

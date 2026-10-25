@@ -130,9 +130,10 @@ export default function Sidebar() {
                         <p style={styles.userRole}>{usuario?.rol}</p>
                     </div>
                 </div>
-                <button
+<button
     onClick={() => navigate('/')}
-    style={styles.logoutBtn}>
+    className="btn-3d"
+    style={{ width: '100%', justifyContent: 'center' }}>
     <Home size={16} />
     Ir a la landing
 </button>

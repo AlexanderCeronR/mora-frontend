@@ -87,8 +87,9 @@ export default function Login() {
                 <div style={styles.themeCorner}>
                                 <ThemeSwitch />
                 </div>
-                <button
+<button
     onClick={() => navigate('/')}
+    className="btn-3d"
     style={styles.homeCorner}>
     <Home size={15} />
     Inicio
@@ -415,20 +416,9 @@ const styles = {
         top: '20px',
         right: '20px',
     },
-    homeCorner: {
+homeCorner: {
     position: 'absolute',
     top: '20px',
     left: '20px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    padding: '7px 14px',
-    borderRadius: 'var(--radius-full)',
-    border: '1px solid var(--border-default)',
-    backgroundColor: 'transparent',
-    color: 'var(--text-secondary)',
-    fontSize: 'var(--text-sm)',
-    fontFamily: 'var(--font-sans)',
-    cursor: 'pointer',
 },
 };

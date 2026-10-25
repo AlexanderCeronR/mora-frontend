@@ -6,7 +6,7 @@ import ThemeSwitch from '../ui/ThemeSwitch';
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
-    ClipboardList, ChefHat, Home
+    ClipboardList, ChefHat
 } from 'lucide-react';
 
 const navItems = [
@@ -130,13 +130,6 @@ export default function Sidebar() {
                         <p style={styles.userRole}>{usuario?.rol}</p>
                     </div>
                 </div>
-<button
-    onClick={() => navigate('/')}
-    className="btn-3d"
-    style={{ width: '100%', justifyContent: 'center' }}>
-    <Home size={16} />
-    Ir a la landing
-</button>
                 {/* Interruptor de tema */}
                 <div style={styles.themeRow}>
                     <span style={styles.themeLabel}>

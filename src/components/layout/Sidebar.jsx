@@ -1,5 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { Sun, Moon } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
 
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
@@ -56,6 +58,7 @@ const navItems = [
         icon: ChefHat,
         roles: ['ADMIN', 'COCINA', 'SUPERVISOR']
     },
+    { theme, toggleTheme } = useTheme()
 ];
 
 export default function Sidebar() {
@@ -127,6 +130,13 @@ export default function Sidebar() {
                         <p style={styles.userRole}>{usuario?.rol}</p>
                     </div>
                 </div>
+
+                <button
+    onClick={toggleTheme}
+    style={styles.logoutBtn}>
+    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+    {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+</button>
 
                 {/* Logout */}
                 <button

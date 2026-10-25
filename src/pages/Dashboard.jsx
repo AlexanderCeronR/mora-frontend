@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import PageTransition from '../components/ui/PageTransition';
 import { SkeletonCard } from '../components/ui/Skeleton';
 import { showToast } from '../components/ui/Toast';
+import { useTheme } from '../context/ThemeContext';
 import {
     TrendingUp, ShoppingBag, CreditCard, Receipt,
     Send, Sparkles, Trophy, PieChart as PieChartIcon, Wallet
@@ -15,13 +16,22 @@ import {
     ResponsiveContainer, Legend
 } from 'recharts';
 
-// Color base y color claro (para el brillo)
+// Paleta de color (modo oscuro)
 const PALETA = [
     { base: '#443199', light: '#8b73f0' },
     { base: '#792CA2', light: '#c067ea' },
     { base: '#C13383', light: '#f777b6' },
     { base: '#E05454', light: '#ff9494' },
     { base: '#f59e0b', light: '#fde047' },
+];
+
+// Paleta blanco y negro (modo claro)
+const PALETA_BN = [
+    { base: '#000000', light: '#4d4d4d' },
+    { base: '#404040', light: '#8c8c8c' },
+    { base: '#808080', light: '#bfbfbf' },
+    { base: '#b3b3b3', light: '#e6e6e6' },
+    { base: '#d9d9d9', light: '#ffffff' },
 ];
 
 const TooltipEstilo = {
@@ -37,9 +47,9 @@ const TooltipEstilo = {
 };
 
 // Degradados tipo cilindro para las barras (efecto 3D)
-const defsBarras = () => (
+const defsBarras = (paleta) => (
     <defs>
-        {PALETA.map((c, i) => (
+        {paleta.map((c, i) => (
             <linearGradient
                 key={i}
                 id={`barra-${i}`}
@@ -53,9 +63,9 @@ const defsBarras = () => (
 );
 
 // Degradados radiales tipo esfera con brillo para las tortas
-const defsTorta = (prefijo) => (
+const defsTorta = (prefijo, paleta) => (
     <defs>
-        {PALETA.map((c, i) => (
+        {paleta.map((c, i) => (
             <radialGradient
                 key={i}
                 id={`${prefijo}-${i}`}
@@ -72,6 +82,10 @@ const sombra = (color) => ({
 });
 
 export default function Dashboard() {
+    const { theme } = useTheme();
+    const claro = theme === 'light';
+    const paleta = claro ? PALETA_BN : PALETA;
+
     const [datos, setDatos] = useState(null);
     const [loading, setLoading] = useState(true);
     const [preguntaIA, setPreguntaIA] = useState('');
@@ -152,22 +166,24 @@ export default function Dashboard() {
             label: 'Total Ventas',
             valor: `$${datos?.totalVentas?.toLocaleString() || 0}`,
             icon: TrendingUp,
-            color: '#8b73f0',
+            color: claro ? '#000000' : '#8b73f0',
             gradient: 'var(--gradient-primary)',
         },
         {
             label: 'Total Pedidos',
             valor: datos?.totalPedidos || 0,
             icon: ShoppingBag,
-            color: '#c067ea',
+            color: claro ? '#000000' : '#c067ea',
             gradient: 'var(--gradient-accent)',
         },
         {
             label: 'Pagos Registrados',
             valor: datos?.totalPagos || 0,
             icon: CreditCard,
-            color: '#f777b6',
-            gradient: 'linear-gradient(135deg, #C13383, #E05454)',
+            color: claro ? '#000000' : '#f777b6',
+            gradient: claro
+                ? '#000000'
+                : 'linear-gradient(135deg, #C13383, #E05454)',
         },
         {
             label: 'Ticket Promedio',
@@ -176,8 +192,10 @@ export default function Dashboard() {
                     .toLocaleString()
                 : 0}`,
             icon: Receipt,
-            color: '#ff9494',
-            gradient: 'linear-gradient(135deg, #E05454, #f59e0b)',
+            color: claro ? '#000000' : '#ff9494',
+            gradient: claro
+                ? '#000000'
+                : 'linear-gradient(135deg, #E05454, #f59e0b)',
         },
     ];
 
@@ -256,7 +274,7 @@ export default function Dashboard() {
                                 data={datosProductos}
                                 barCategoryGap="22%"
                                 margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                                {defsBarras()}
+                                {defsBarras(paleta)}
                                 <CartesianGrid
                                     strokeDasharray="3 3"
                                     stroke="var(--border-subtle)"
@@ -273,7 +291,7 @@ export default function Dashboard() {
                                     axisLine={false}
                                     tickLine={false} />
                                 <Tooltip
-                                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                                    cursor={{ fill: 'rgba(128,128,128,0.08)' }}
                                     {...TooltipEstilo} />
                                 <Bar
                                     dataKey="cantidad"
@@ -281,8 +299,8 @@ export default function Dashboard() {
                                     {datosProductos.map((_, i) => (
                                         <Cell
                                             key={i}
-                                            fill={`url(#barra-${i % PALETA.length})`}
-                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                            fill={`url(#barra-${i % paleta.length})`}
+                                            style={sombra(paleta[i % paleta.length].base)} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -304,7 +322,7 @@ export default function Dashboard() {
                         </div>
                         <ResponsiveContainer width="100%" height={230}>
                             <PieChart>
-                                {defsTorta('cat')}
+                                {defsTorta('cat', paleta)}
                                 <Pie
                                     data={datosCategorias}
                                     dataKey="total"
@@ -319,8 +337,8 @@ export default function Dashboard() {
                                     {datosCategorias.map((_, i) => (
                                         <Cell
                                             key={i}
-                                            fill={`url(#cat-${i % PALETA.length})`}
-                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                            fill={`url(#cat-${i % paleta.length})`}
+                                            style={sombra(paleta[i % paleta.length].base)} />
                                     ))}
                                 </Pie>
                                 <Tooltip
@@ -345,7 +363,9 @@ export default function Dashboard() {
                         <div style={styles.graficaHeader}>
                             <div style={{
                                 ...styles.graficaIcono,
-                                background: 'linear-gradient(135deg, #C13383, #E05454)'
+                                background: claro
+                                    ? '#000000'
+                                    : 'linear-gradient(135deg, #C13383, #E05454)'
                             }}>
                                 <Wallet size={15} color="white" />
                             </div>
@@ -355,7 +375,7 @@ export default function Dashboard() {
                         </div>
                         <ResponsiveContainer width="100%" height={230}>
                             <PieChart>
-                                {defsTorta('met')}
+                                {defsTorta('met', paleta)}
                                 <Pie
                                     data={datosMetodos}
                                     dataKey="cantidad"
@@ -370,8 +390,8 @@ export default function Dashboard() {
                                     {datosMetodos.map((_, i) => (
                                         <Cell
                                             key={i}
-                                            fill={`url(#met-${i % PALETA.length})`}
-                                            style={sombra(PALETA[i % PALETA.length].base)} />
+                                            fill={`url(#met-${i % paleta.length})`}
+                                            style={sombra(paleta[i % paleta.length].base)} />
                                     ))}
                                 </Pie>
                                 <Tooltip {...TooltipEstilo} />
@@ -439,7 +459,7 @@ export default function Dashboard() {
                             onFocus={e => {
                                 e.target.style.borderColor = 'var(--color-primary)';
                                 e.target.style.boxShadow =
-                                    '0 0 0 3px rgba(68,49,153,0.15)';
+                                    '0 0 0 3px rgba(128,128,128,0.2)';
                             }}
                             onBlur={e => {
                                 e.target.style.borderColor = 'var(--border-default)';
@@ -533,7 +553,7 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        boxShadow: '0 4px 12px rgba(121,44,162,0.35)',
+        boxShadow: 'var(--shadow-glow)',
     },
     graficaTitulo: {
         fontSize: 'var(--text-base)',
@@ -612,7 +632,7 @@ const styles = {
         padding: 'var(--space-4)',
         backgroundColor: 'var(--color-primary-10)',
         borderRadius: 'var(--radius-md)',
-        border: '1px solid var(--color-primary-10)',
+        border: '1px solid var(--border-subtle)',
     },
     respuestaIcon: {
         width: '28px',

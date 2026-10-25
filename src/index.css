@@ -219,6 +219,71 @@ body {
   white-space: nowrap;
 }
 
+/* =====================
+   MODO CLARO — blanco y negro
+   ===================== */
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Todo el color de marca pasa a negro */
+  --color-primary:         #000000;
+  --color-secondary:       #000000;
+  --color-accent:          #000000;
+  --color-danger:          #000000;
+  --color-primary-light:   #000000;
+  --color-primary-dark:    #000000;
+  --color-secondary-light: #000000;
+  --color-accent-light:    #000000;
+  --color-danger-light:    #000000;
+
+  --color-primary-10:   rgba(0,0,0,0.06);
+  --color-secondary-10: rgba(0,0,0,0.06);
+  --color-accent-10:    rgba(0,0,0,0.06);
+  --color-danger-10:    rgba(0,0,0,0.06);
+
+  /* Los degradados pasan a negro sólido */
+  --gradient-primary: #000000;
+  --gradient-accent:  #000000;
+  --gradient-full:    #000000;
+  --gradient-danger:  #000000;
+
+  /* Fondos */
+  --bg-base:     #ffffff;
+  --bg-surface:  #ffffff;
+  --bg-elevated: #f5f5f5;
+  --bg-overlay:  #ebebeb;
+  --bg-hover:    #e0e0e0;
+
+  /* Bordes */
+  --border-subtle:  #d9d9d9;
+  --border-default: #8c8c8c;
+  --border-strong:  #000000;
+
+  /* Texto */
+  --text-primary:   #000000;
+  --text-secondary: #1a1a1a;
+  --text-muted:     #404040;
+  --text-disabled:  #737373;
+
+  /* Estados en blanco y negro */
+  --color-success: #000000;
+  --color-warning: #000000;
+  --color-info:    #000000;
+
+  /* Sombras suaves, sin resplandor de color */
+  --shadow-sm:  0 1px 2px rgba(0,0,0,0.12);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.15);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,0.18);
+  --shadow-xl:  0 16px 48px rgba(0,0,0,0.22);
+  --shadow-glow: 0 2px 8px rgba(0,0,0,0.25);
+  --shadow-glow-accent: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+[data-theme="light"] ::selection {
+  background: #000;
+  color: #fff;
+}
+
 @keyframes slideIn {
     from {
         opacity: 0;

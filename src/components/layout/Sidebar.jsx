@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import ThemeSwitch from '../ui/ThemeSwitch';
 
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
-    ClipboardList, ChefHat, Sun, Moon
+    ClipboardList, ChefHat
 } from 'lucide-react';
 
 const navItems = [
@@ -63,7 +64,8 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { usuario, logout } = useAuth();
-    const { theme, toggleTheme } = useTheme();
+    const { theme } = useTheme();
+
     const itemsFiltrados = navItems.filter(item =>
         item.roles.includes(usuario?.rol)
     );
@@ -129,12 +131,13 @@ export default function Sidebar() {
                     </div>
                 </div>
 
-                <button
-    onClick={toggleTheme}
-    style={styles.logoutBtn}>
-    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-    {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
-</button>
+                {/* Interruptor de tema */}
+                <div style={styles.themeRow}>
+                    <span style={styles.themeLabel}>
+                        {theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
+                    </span>
+                    <ThemeSwitch />
+                </div>
 
                 {/* Logout */}
                 <button
@@ -221,36 +224,36 @@ const styles = {
         overflowY: 'auto',
     },
     navItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    paddingTop: '10px',
-    paddingBottom: '10px',
-    paddingRight: '12px',
-    paddingLeft: '12px',
-    borderRadius: 'var(--radius-md)',
-    borderLeft: '2px solid transparent',
-    borderTop: 'none',
-    borderRight: 'none',
-    borderBottom: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--text-secondary)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: 'var(--font-medium)',
-    fontFamily: 'var(--font-sans)',
-    cursor: 'pointer',
-    textAlign: 'left',
-    width: '100%',
-    transition: 'all var(--transition-fast)',
-    position: 'relative',
-},
-navItemActive: {
-    backgroundColor: 'var(--color-primary-10)',
-    color: 'var(--color-primary-light)',
-    fontWeight: 'var(--font-semibold)',
-    borderLeft: '2px solid var(--color-primary)',
-    paddingLeft: '10px',
-},
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        paddingTop: '10px',
+        paddingBottom: '10px',
+        paddingRight: '12px',
+        paddingLeft: '12px',
+        borderRadius: 'var(--radius-md)',
+        borderLeft: '2px solid transparent',
+        borderTop: 'none',
+        borderRight: 'none',
+        borderBottom: 'none',
+        backgroundColor: 'transparent',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        width: '100%',
+        transition: 'all var(--transition-fast)',
+        position: 'relative',
+    },
+    navItemActive: {
+        backgroundColor: 'var(--color-primary-10)',
+        color: 'var(--color-primary-light)',
+        fontWeight: 'var(--font-semibold)',
+        borderLeft: '2px solid var(--color-primary)',
+        paddingLeft: '10px',
+    },
     activeDot: {
         width: '6px',
         height: '6px',
@@ -303,6 +306,17 @@ navItemActive: {
         color: 'var(--text-muted)',
         fontSize: 'var(--text-xs)',
         margin: 0,
+    },
+    themeRow: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '6px 4px',
+    },
+    themeLabel: {
+        fontSize: 'var(--text-sm)',
+        color: 'var(--text-secondary)',
+        fontWeight: 'var(--font-medium)',
     },
     logoutBtn: {
         display: 'flex',

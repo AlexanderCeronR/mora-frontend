@@ -5,6 +5,7 @@ import {
     BarChart2, Shield, Sparkles,
     ArrowRight, Check
 } from 'lucide-react';
+import ThemeSwitch from '../components/ui/ThemeSwitch';
 
 export default function Landing() {
     const navigate = useNavigate();
@@ -122,16 +123,15 @@ export default function Landing() {
                     <span style={styles.navLogoText}>MORA</span>
                 </div>
                 <div style={styles.navRight}>
-                    <span style={styles.navSub}>
-                        Manager Of Restaurant Administration
-                    </span>
-                    <button
-                        onClick={() => navigate('/login')}
-                        style={styles.navBtn}>
-                        Iniciar sesión
-                        <ArrowRight size={14} />
-                    </button>
-                </div>
+    <span style={styles.navSub}>
+        Manager Of Restaurant Administration
+    </span>
+    <ThemeSwitch />
+    <button onClick={() => navigate('/login')} style={styles.navBtn}>
+        Iniciar sesión
+        <ArrowRight size={14} />
+    </button>
+</div>
             </nav>
 
             {/* Hero */}
@@ -328,7 +328,7 @@ const styles = {
         borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
-        backgroundColor: 'rgba(9,9,15,0.8)',
+        backgroundColor: 'var(--nav-bg)',
         backdropFilter: 'blur(12px)',
         zIndex: 100,
     },
@@ -660,8 +660,8 @@ const styles = {
         padding: '14px 32px',
         borderRadius: 'var(--radius-md)',
         border: 'none',
-        backgroundColor: 'white',
-        color: '#443199',
+        backgroundColor: 'var(--cta-bg)',
+        color: 'var(--cta-text)',
         fontSize: 'var(--text-base)',
         fontWeight: 'var(--font-bold)',
         fontFamily: 'var(--font-sans)',

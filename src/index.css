@@ -111,6 +111,10 @@
   --z-sidebar:  200;
   --z-modal:    300;
   --z-toast:    400;
+
+  --nav-bg:   rgba(9,9,15,0.8);
+  --cta-bg:   #ffffff;
+  --cta-text: #443199;
 }
 
 /* =====================
@@ -277,6 +281,10 @@ body {
   --shadow-xl:  0 16px 48px rgba(0,0,0,0.22);
   --shadow-glow: 0 2px 8px rgba(0,0,0,0.25);
   --shadow-glow-accent: 0 2px 8px rgba(0,0,0,0.25);
+
+  --nav-bg:   rgba(255,255,255,0.85);
+  --cta-bg:   #000000;
+  --cta-text: #ffffff;
 }
 
 [data-theme="light"] ::selection {

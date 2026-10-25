@@ -248,7 +248,7 @@ body {
   --gradient-danger:  #000000;
 
   /* Fondos */
-  --bg-base:     #ffffff;
+  --bg-base:     transparent;
   --bg-surface:  #ffffff;
   --bg-elevated: #f5f5f5;
   --bg-overlay:  #ebebeb;

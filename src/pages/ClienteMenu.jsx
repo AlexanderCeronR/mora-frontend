@@ -2,23 +2,27 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { showToast } from '../components/ui/Toast';
-import { ShoppingBag, Plus, Minus, CheckCircle, Clock } from 'lucide-react';
+import {
+    ShoppingBag, Plus, Minus, CheckCircle, Clock,
+    UtensilsCrossed, Salad, GlassWater, CakeSlice, Utensils,
+    ChefHat, PackageCheck, Receipt, Hourglass
+} from 'lucide-react';
 
 const categorias = ['TODOS', 'PLATO FUERTE', 'ENTRADA', 'BEBIDA', 'POSTRE'];
 
-const categoriaEmoji = {
-    'PLATO FUERTE': '🍽️',
-    'ENTRADA': '🥗',
-    'BEBIDA': '🥤',
-    'POSTRE': '🍰',
+const categoriaIcon = {
+    'PLATO FUERTE': UtensilsCrossed,
+    'ENTRADA': Salad,
+    'BEBIDA': GlassWater,
+    'POSTRE': CakeSlice,
 };
 
 const estadoConfig = {
-    PENDIENTE:      { label: 'Pendiente',       color: '#f59e0b', emoji: '⏳' },
-    EN_PREPARACION: { label: 'En preparación',  color: '#3b82f6', emoji: '👨‍🍳' },
-    LISTO:          { label: 'Listo',           color: '#22c55e', emoji: '✅' },
-    ENTREGADO:      { label: 'Entregado',       color: '#94a3b8', emoji: '🍽️' },
-    PAGADO:         { label: 'Pagado',          color: '#443199', emoji: '💳' },
+    PENDIENTE:      { label: 'Pendiente',      icon: Hourglass,    gradient: 'linear-gradient(135deg, #f59e0b, #E05454)' },
+    EN_PREPARACION: { label: 'En preparación', icon: ChefHat,      gradient: 'linear-gradient(135deg, #3b82f6, #443199)' },
+    LISTO:          { label: 'Listo',          icon: CheckCircle,  gradient: 'linear-gradient(135deg, #22c55e, #16a34a)' },
+    ENTREGADO:      { label: 'Entregado',      icon: PackageCheck, gradient: 'linear-gradient(135deg, #792CA2, #C13383)' },
+    PAGADO:         { label: 'Pagado',         icon: Receipt,      gradient: 'linear-gradient(135deg, #443199, #792CA2)' },
 };
 
 export default function ClienteMenu() {
@@ -30,29 +34,22 @@ export default function ClienteMenu() {
     // MENU = ver productos
     // CONFIRMACION = resumen antes de enviar
     // ESTADO = ver estado del pedido
-    const [pedidoInfo, setPedidoInfo] = useState(null);
     const [estadoPedido, setEstadoPedido] = useState(null);
     const [loading, setLoading] = useState(true);
     const [enviando, setEnviando] = useState(false);
 
-    useEffect(() => {
-        cargarMenu();
-        // Si hay token guardado ver estado del pedido
-        const token = localStorage.getItem(`mora_token_mesa_${mesaId}`);
-        if (token) {
-            setVista('ESTADO');
-            cargarEstado(token);
-        }
-    }, [mesaId]);
+    const tokenKey = `mora_token_mesa_${mesaId}`;
 
-    // Polling del estado cada 20 segundos
-    useEffect(() => {
-        if (vista !== 'ESTADO' || !pedidoInfo?.tokenCliente) return;
-        const interval = setInterval(() => {
-            cargarEstado(pedidoInfo.tokenCliente);
-        }, 20000);
-        return () => clearInterval(interval);
-    }, [vista, pedidoInfo]);
+    const cargarEstado = useCallback(async (token) => {
+        try {
+            const res = await axiosClient.get(
+                `/publico/pedido/${token}/estado`
+            );
+            setEstadoPedido(res.data);
+        } catch {
+            showToast('Error al cargar el estado', 'error');
+        }
+    }, []);
 
     const cargarMenu = async () => {
         try {
@@ -65,16 +62,24 @@ export default function ClienteMenu() {
         }
     };
 
-    const cargarEstado = useCallback(async (token) => {
-        try {
-            const res = await axiosClient.get(
-                `/publico/pedido/${token}/estado`
-            );
-            setEstadoPedido(res.data);
-        } catch {
-            showToast('Error al cargar el estado', 'error');
+    useEffect(() => {
+        cargarMenu();
+        const token = localStorage.getItem(tokenKey);
+        if (token) {
+            setVista('ESTADO');
+            cargarEstado(token);
         }
-    }, []);
+    }, [mesaId]);
+
+    // Polling del estado cada 20 segundos
+    useEffect(() => {
+        if (vista !== 'ESTADO') return;
+        const interval = setInterval(() => {
+            const token = localStorage.getItem(tokenKey);
+            if (token) cargarEstado(token);
+        }, 20000);
+        return () => clearInterval(interval);
+    }, [vista, tokenKey, cargarEstado]);
 
     const agregarAlCarrito = (producto) => {
         setCarrito(prev => ({
@@ -121,13 +126,8 @@ export default function ClienteMenu() {
                 detalles
             );
 
-            // Guarda el token en localStorage
-            localStorage.setItem(
-                `mora_token_mesa_${mesaId}`,
-                res.data.tokenCliente
-            );
+            localStorage.setItem(tokenKey, res.data.tokenCliente);
 
-            setPedidoInfo(res.data);
             setCarrito({});
             setVista('ESTADO');
             cargarEstado(res.data.tokenCliente);
@@ -142,6 +142,11 @@ export default function ClienteMenu() {
     const productosFiltrados = productos.filter(p =>
         filtro === 'TODOS' || p.categoria === filtro
     );
+
+    const renderIcono = (categoria, size, color) => {
+        const Icon = categoriaIcon[categoria] || Utensils;
+        return <Icon size={size} color={color} />;
+    };
 
     if (loading) return (
         <div style={styles.loading}>
@@ -190,40 +195,51 @@ export default function ClienteMenu() {
             {/* Vista MENU */}
             {vista === 'MENU' && (
                 <div style={styles.content}>
-                    {/* Tabs categorías */}
                     <div style={styles.tabs}>
-                        {categorias.map(cat => (
-                            <button
-                                key={cat}
-                                onClick={() => setFiltro(cat)}
-                                style={{
-                                    ...styles.tab,
-                                    ...(filtro === cat ? styles.tabActive : {})
-                                }}>
-                                {cat === 'TODOS' ? 'Todo' : (
-                                    `${categoriaEmoji[cat]} ${cat.charAt(0) + cat.slice(1).toLowerCase()}`
-                                )}
-                            </button>
-                        ))}
+                        {categorias.map(cat => {
+                            const Icon = categoriaIcon[cat];
+                            return (
+                                <button
+                                    key={cat}
+                                    onClick={() => setFiltro(cat)}
+                                    style={{
+                                        ...styles.tab,
+                                        ...(filtro === cat
+                                            ? styles.tabActive : {})
+                                    }}>
+                                    {Icon && <Icon size={14} />}
+                                    {cat === 'TODOS'
+                                        ? 'Todo'
+                                        : cat.charAt(0) +
+                                          cat.slice(1).toLowerCase()}
+                                </button>
+                            );
+                        })}
                     </div>
 
-                    {/* Grid productos */}
                     <div style={styles.grid}>
                         {productosFiltrados.map(producto => {
                             const enCarrito = carrito[producto.id];
                             return (
-                                <div key={producto.id} style={styles.productoCard}>
-                                    <div style={styles.productoEmoji}>
-    {producto.imagenUrl ? (
-        <img
-            src={producto.imagenUrl}
-            alt={producto.nombre}
-            style={styles.productoImagen}
-        />
-    ) : (
-        categoriaEmoji[producto.categoria] || '🍴'
-    )}
-</div>
+                                <div key={producto.id}
+                                    style={styles.productoCard}>
+                                    <div style={styles.productoMedia}>
+                                        {producto.imagenUrl ? (
+                                            <img
+                                                src={producto.imagenUrl}
+                                                alt={producto.nombre}
+                                                style={styles.productoImagen}
+                                            />
+                                        ) : (
+                                            <div style={styles.iconoPlaceholder}>
+                                                {renderIcono(
+                                                    producto.categoria,
+                                                    26,
+                                                    '#792CA2'
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div style={styles.productoInfo}>
                                         <p style={styles.productoNombre}>
                                             {producto.nombre}
@@ -241,7 +257,8 @@ export default function ClienteMenu() {
                                         {enCarrito ? (
                                             <div style={styles.cantidadControl}>
                                                 <button
-                                                    onClick={() => quitarDelCarrito(producto.id)}
+                                                    onClick={() =>
+                                                        quitarDelCarrito(producto.id)}
                                                     style={styles.cantidadBtn}>
                                                     <Minus size={14} />
                                                 </button>
@@ -249,14 +266,16 @@ export default function ClienteMenu() {
                                                     {enCarrito.cantidad}
                                                 </span>
                                                 <button
-                                                    onClick={() => agregarAlCarrito(producto)}
+                                                    onClick={() =>
+                                                        agregarAlCarrito(producto)}
                                                     style={styles.cantidadBtn}>
                                                     <Plus size={14} />
                                                 </button>
                                             </div>
                                         ) : (
                                             <button
-                                                onClick={() => agregarAlCarrito(producto)}
+                                                onClick={() =>
+                                                    agregarAlCarrito(producto)}
                                                 style={styles.agregarBtn}>
                                                 <Plus size={14} />
                                                 Agregar
@@ -268,7 +287,6 @@ export default function ClienteMenu() {
                         })}
                     </div>
 
-                    {/* Barra del carrito */}
                     {itemsCarrito > 0 && (
                         <div style={styles.carritoBar}>
                             <div>
@@ -298,9 +316,17 @@ export default function ClienteMenu() {
                         {Object.values(carrito).map(p => (
                             <div key={p.id} style={styles.resumenItem}>
                                 <div style={styles.resumenLeft}>
-                                    <span style={styles.resumenEmoji}>
-                                        {categoriaEmoji[p.categoria] || '🍴'}
-                                    </span>
+                                    <div style={styles.resumenIcono}>
+                                        {p.imagenUrl ? (
+                                            <img
+                                                src={p.imagenUrl}
+                                                alt={p.nombre}
+                                                style={styles.resumenImagen}
+                                            />
+                                        ) : (
+                                            renderIcono(p.categoria, 20, '#792CA2')
+                                        )}
+                                    </div>
                                     <div>
                                         <p style={styles.resumenNombre}>
                                             {p.nombre}
@@ -354,7 +380,7 @@ export default function ClienteMenu() {
                                 ...styles.enviarBtn,
                                 opacity: enviando ? 0.7 : 1,
                             }}>
-                            {enviando ? 'Enviando...' : '✓ Confirmar pedido'}
+                            {enviando ? 'Enviando...' : 'Confirmar pedido'}
                         </button>
                     </div>
                 </div>
@@ -364,11 +390,22 @@ export default function ClienteMenu() {
             {vista === 'ESTADO' && (
                 <div style={styles.content}>
                     <div style={styles.estadoWrap}>
-                        <div style={styles.estadoEmoji}>
-                            {estadoConfig[estadoPedido?.estado]?.emoji || '⏳'}
-                        </div>
+                        {(() => {
+                            const cfg = estadoConfig[estadoPedido?.estado]
+                                || estadoConfig.PENDIENTE;
+                            const EstadoIcon = cfg.icon;
+                            return (
+                                <div style={{
+                                    ...styles.estadoIconWrap,
+                                    background: cfg.gradient
+                                }}>
+                                    <EstadoIcon size={40} color="white" />
+                                </div>
+                            );
+                        })()}
                         <h2 style={styles.estadoTitulo}>
-                            {estadoConfig[estadoPedido?.estado]?.label || 'Cargando...'}
+                            {estadoConfig[estadoPedido?.estado]?.label ||
+                                'Cargando...'}
                         </h2>
                         <p style={styles.estadoDesc}>
                             {estadoPedido?.estado === 'PENDIENTE' &&
@@ -383,8 +420,8 @@ export default function ClienteMenu() {
                                 'Tu pedido fue pagado. ¡Gracias por visitarnos!'}
                         </p>
 
-                        {/* Mesero asignado */}
-                        {estadoPedido?.mesero && (
+                        {estadoPedido?.estadoAsignacion === 'ASIGNADO' &&
+                            estadoPedido?.mesero && (
                             <div style={styles.meseroAsignado}>
                                 <p style={styles.meseroLabel}>Tu mesero</p>
                                 <p style={styles.meseroNombre}>
@@ -395,49 +432,48 @@ export default function ClienteMenu() {
 
                         {/* Barra de progreso */}
                         <div style={styles.progreso}>
-                            {['PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO'].map((e, i) => {
-                                const estados = ['PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO', 'PAGADO'];
-                                const indiceActual = estados.indexOf(estadoPedido?.estado);
-                                const activo = i <= indiceActual;
-                                return (
-                                    <div key={e} style={styles.progresoItem}>
-                                        <div style={{
-                                            ...styles.progresoDot,
-                                            backgroundColor: activo
-                                                ? 'var(--color-primary)'
-                                                : 'var(--bg-overlay)',
-                                            border: activo
-                                                ? 'none'
-                                                : '2px solid var(--border-default)',
-                                        }}>
-                                            {activo && <CheckCircle size={14} color="white" />}
-                                        </div>
-                                        <p style={{
-                                            ...styles.progresoLabel,
-                                            color: activo
-                                                ? 'var(--text-primary)'
-                                                : 'var(--text-muted)',
-                                        }}>
-                                            {estadoConfig[e]?.label}
-                                        </p>
-                                        {i < 3 && (
+                            {['PENDIENTE', 'EN_PREPARACION', 'LISTO', 'ENTREGADO']
+                                .map((e, i) => {
+                                    const estados = ['PENDIENTE', 'EN_PREPARACION',
+                                        'LISTO', 'ENTREGADO', 'PAGADO'];
+                                    const indiceActual =
+                                        estados.indexOf(estadoPedido?.estado);
+                                    const activo = i <= indiceActual;
+                                    return (
+                                        <div key={e} style={styles.progresoItem}>
                                             <div style={{
-                                                ...styles.progresoLinea,
-                                                backgroundColor: i < indiceActual
-                                                    ? 'var(--color-primary)'
-                                                    : 'var(--border-default)',
-                                            }} />
-                                        )}
-                                    </div>
-                                );
-                            })}
+                                                ...styles.progresoDot,
+                                                backgroundColor: activo
+                                                    ? '#443199' : '#222233',
+                                                border: activo
+                                                    ? '2px solid #443199'
+                                                    : '2px solid #2a2a3d',
+                                            }}>
+                                                {activo &&
+                                                    <CheckCircle size={14} color="white" />}
+                                            </div>
+                                            <p style={{
+                                                ...styles.progresoLabel,
+                                                color: activo
+                                                    ? '#f0f0ff' : '#606080',
+                                            }}>
+                                                {estadoConfig[e]?.label}
+                                            </p>
+                                            {i < 3 && (
+                                                <div style={{
+                                                    ...styles.progresoLinea,
+                                                    backgroundColor: i < indiceActual
+                                                        ? '#443199' : '#2a2a3d',
+                                                }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
                         </div>
 
                         {/* Detalles del pedido */}
                         <div style={styles.pedidoResumen}>
-                            <p style={styles.pedidoResumenTitulo}>
-                                Tu pedido
-                            </p>
+                            <p style={styles.pedidoResumenTitulo}>Tu pedido</p>
                             {estadoPedido?.detalles?.map((d, i) => (
                                 <div key={i} style={styles.pedidoResumenItem}>
                                     <span style={styles.pedidoResumenNombre}>
@@ -546,7 +582,6 @@ const styles = {
         fontWeight: '600',
         fontFamily: 'Inter, sans-serif',
         cursor: 'pointer',
-        position: 'relative',
     },
     carritoBadge: {
         backgroundColor: '#C13383',
@@ -584,6 +619,9 @@ const styles = {
         scrollbarWidth: 'none',
     },
     tab: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
         padding: '7px 14px',
         borderRadius: '20px',
         border: '1px solid #2a2a3d',
@@ -598,7 +636,7 @@ const styles = {
     tabActive: {
         background: 'linear-gradient(135deg, #443199, #792CA2)',
         color: 'white',
-        border: 'none',
+        borderColor: 'transparent',
     },
     grid: {
         display: 'flex',
@@ -614,9 +652,25 @@ const styles = {
         borderRadius: '12px',
         border: '1px solid #1e1e2e',
     },
-    productoEmoji: {
-        fontSize: '28px',
+    productoMedia: {
         flexShrink: 0,
+    },
+    productoImagen: {
+        width: '64px',
+        height: '64px',
+        borderRadius: '10px',
+        objectFit: 'cover',
+        display: 'block',
+    },
+    iconoPlaceholder: {
+        width: '64px',
+        height: '64px',
+        borderRadius: '10px',
+        backgroundColor: '#1a1a26',
+        border: '1px solid #1e1e2e',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     productoInfo: {
         flex: 1,
@@ -636,10 +690,7 @@ const styles = {
     productoPrecio: {
         fontSize: '15px',
         fontWeight: '700',
-        background: 'linear-gradient(135deg, #792CA2, #C13383)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
+        color: '#C13383',
         margin: 0,
     },
     productoAccion: {
@@ -753,9 +804,21 @@ const styles = {
         gap: '12px',
         flex: 1,
     },
-    resumenEmoji: {
-        fontSize: '24px',
+    resumenIcono: {
+        width: '44px',
+        height: '44px',
+        borderRadius: '8px',
+        backgroundColor: '#1a1a26',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         flexShrink: 0,
+        overflow: 'hidden',
+    },
+    resumenImagen: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
     },
     resumenNombre: {
         fontSize: '14px',
@@ -797,10 +860,7 @@ const styles = {
     totalValor: {
         fontSize: '24px',
         fontWeight: '700',
-        background: 'linear-gradient(135deg, #792CA2, #C13383)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
+        color: '#C13383',
     },
     confirmBtns: {
         display: 'flex',
@@ -836,8 +896,14 @@ const styles = {
         paddingTop: '20px',
         textAlign: 'center',
     },
-    estadoEmoji: {
-        fontSize: '64px',
+    estadoIconWrap: {
+        width: '88px',
+        height: '88px',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxShadow: '0 8px 32px rgba(68,49,153,0.35)',
     },
     estadoTitulo: {
         fontSize: '24px',
@@ -875,7 +941,6 @@ const styles = {
     progreso: {
         display: 'flex',
         alignItems: 'flex-start',
-        gap: '0',
         width: '100%',
         justifyContent: 'center',
     },
@@ -895,6 +960,7 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1,
+        boxSizing: 'border-box',
     },
     progresoLinea: {
         position: 'absolute',
@@ -908,6 +974,7 @@ const styles = {
         fontSize: '10px',
         textAlign: 'center',
         lineHeight: 1.3,
+        margin: 0,
     },
     pedidoResumen: {
         width: '100%',
@@ -918,6 +985,7 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
+        boxSizing: 'border-box',
     },
     pedidoResumenTitulo: {
         fontSize: '13px',
@@ -959,10 +1027,4 @@ const styles = {
         fontSize: '11px',
         color: '#404060',
     },
-    productoImagen: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '10px',
-    objectFit: 'cover',
-},
 };

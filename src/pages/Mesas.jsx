@@ -11,6 +11,7 @@ import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/ui/PageTransition';
 import { QRCodeSVG } from 'qrcode.react';
+import { useTheme } from '../context/ThemeContext';
 
 const estadoConfig = {
     LIBRE:     { badge: 'success', label: 'Libre',     color: 'var(--color-success)' },
@@ -25,6 +26,7 @@ export default function Mesas() {
     const [modalCrear, setModalCrear] = useState(false);
     const [nuevaMesa, setNuevaMesa] = useState({ numero: '', capacidad: '' });
     const { confirm, config } = useConfirm();
+    const { theme } = useTheme();
     const [usuario] = useState(() =>
         JSON.parse(localStorage.getItem('usuario') || '{}'));
 
@@ -241,12 +243,12 @@ return (
                             {/* QR de la mesa */}
 <div style={styles.qrWrap}>
     <QRCodeSVG
-        value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
-        size={130}
-        bgColor="transparent"
-        fgColor="#f0f0ff"
-        level="M"
-    />
+    value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
+    size={130}
+    bgColor={theme === 'light' ? '#ffffff' : 'transparent'}
+    fgColor={theme === 'light' ? '#000000' : '#f0f0ff'}
+    level="M"
+/>
     <p style={styles.qrLabel}>Escanear para pedir</p>
 </div>
                         </Card>

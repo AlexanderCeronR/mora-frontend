@@ -1,12 +1,11 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
-    ClipboardList, ChefHat // ← nuevo ícono
+    ClipboardList, ChefHat, Sun, Moon
 } from 'lucide-react';
 
 const navItems = [
@@ -58,14 +57,13 @@ const navItems = [
         icon: ChefHat,
         roles: ['ADMIN', 'COCINA', 'SUPERVISOR']
     },
-    { theme, toggleTheme } = useTheme()
 ];
 
 export default function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
     const { usuario, logout } = useAuth();
-
+    const { theme, toggleTheme } = useTheme();
     const itemsFiltrados = navItems.filter(item =>
         item.roles.includes(usuario?.rol)
     );

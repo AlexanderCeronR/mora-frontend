@@ -25,13 +25,13 @@ const PALETA = [
     { base: '#f59e0b', light: '#fde047' },
 ];
 
-// Paleta blanco y negro (modo claro)
+// Paleta blanco y negro, plana (modo claro)
 const PALETA_BN = [
-    { base: '#000000', light: '#4d4d4d' },
-    { base: '#404040', light: '#8c8c8c' },
-    { base: '#808080', light: '#bfbfbf' },
-    { base: '#b3b3b3', light: '#e6e6e6' },
-    { base: '#d9d9d9', light: '#ffffff' },
+    { base: '#000000', light: '#000000' },
+    { base: '#404040', light: '#404040' },
+    { base: '#808080', light: '#808080' },
+    { base: '#b3b3b3', light: '#b3b3b3' },
+    { base: '#d9d9d9', light: '#d9d9d9' },
 ];
 
 const TooltipEstilo = {
@@ -46,7 +46,7 @@ const TooltipEstilo = {
     itemStyle: { color: 'var(--text-primary)' },
 };
 
-// Degradados tipo cilindro para las barras (efecto 3D)
+// Degradados tipo cilindro para las barras
 const defsBarras = (paleta) => (
     <defs>
         {paleta.map((c, i) => (
@@ -62,7 +62,7 @@ const defsBarras = (paleta) => (
     </defs>
 );
 
-// Degradados radiales tipo esfera con brillo para las tortas
+// Degradados radiales tipo esfera para las donas
 const defsTorta = (prefijo, paleta) => (
     <defs>
         {paleta.map((c, i) => (
@@ -77,8 +77,11 @@ const defsTorta = (prefijo, paleta) => (
     </defs>
 );
 
-const sombra = (color) => ({
-    filter: `drop-shadow(0 6px 8px ${color}66)`,
+// Sombra: negra en modo claro, de color en modo oscuro
+const sombra = (color, claro) => ({
+    filter: claro
+        ? 'drop-shadow(0 6px 6px rgba(0,0,0,0.35))'
+        : `drop-shadow(0 6px 8px ${color}66)`,
 });
 
 export default function Dashboard() {
@@ -295,12 +298,14 @@ export default function Dashboard() {
                                     {...TooltipEstilo} />
                                 <Bar
                                     dataKey="cantidad"
-                                    radius={[8, 8, 0, 0]}>
+                                    radius={[8, 8, 0, 0]}
+                                    stroke={claro ? '#000000' : 'none'}
+                                    strokeWidth={claro ? 1 : 0}>
                                     {datosProductos.map((_, i) => (
                                         <Cell
                                             key={i}
                                             fill={`url(#barra-${i % paleta.length})`}
-                                            style={sombra(paleta[i % paleta.length].base)} />
+                                            style={sombra(paleta[i % paleta.length].base, claro)} />
                                     ))}
                                 </Bar>
                             </BarChart>
@@ -333,12 +338,13 @@ export default function Dashboard() {
                                     outerRadius={82}
                                     paddingAngle={4}
                                     cornerRadius={6}
-                                    stroke="none">
+                                    stroke={claro ? '#000000' : 'none'}
+                                    strokeWidth={claro ? 1 : 0}>
                                     {datosCategorias.map((_, i) => (
                                         <Cell
                                             key={i}
                                             fill={`url(#cat-${i % paleta.length})`}
-                                            style={sombra(paleta[i % paleta.length].base)} />
+                                            style={sombra(paleta[i % paleta.length].base, claro)} />
                                     ))}
                                 </Pie>
                                 <Tooltip
@@ -386,12 +392,13 @@ export default function Dashboard() {
                                     outerRadius={82}
                                     paddingAngle={4}
                                     cornerRadius={6}
-                                    stroke="none">
+                                    stroke={claro ? '#000000' : 'none'}
+                                    strokeWidth={claro ? 1 : 0}>
                                     {datosMetodos.map((_, i) => (
                                         <Cell
                                             key={i}
                                             fill={`url(#met-${i % paleta.length})`}
-                                            style={sombra(paleta[i % paleta.length].base)} />
+                                            style={sombra(paleta[i % paleta.length].base, claro)} />
                                     ))}
                                 </Pie>
                                 <Tooltip {...TooltipEstilo} />

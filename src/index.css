@@ -284,6 +284,21 @@ body {
   color: #fff;
 }
 
+/* =====================
+   TEXTURA — modo claro
+   ===================== */
+[data-theme="light"] body {
+  background-color: #ffffff;
+  background-image:
+    /* grano fino tipo papel */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    /* cuadrícula muy tenue */
+    linear-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.035) 1px, transparent 1px);
+  background-size: 200px 200px, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
 @keyframes slideIn {
     from {
         opacity: 0;

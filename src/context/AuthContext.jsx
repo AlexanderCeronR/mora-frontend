@@ -1,30 +1,63 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
-// Contexto global para el usuario autenticado
-// Cualquier componente puede acceder al usuario y token
 const AuthContext = createContext(null);
 
-export function AuthProvider({ children }) {
+const tokenVigente = (token) => {
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.exp * 1000 > Date.now();
+    } catch {
+        return false;
+    }
+};
 
-    const [usuario, setUsuario] = useState(() => {
-        // Al iniciar la app verifica si hay usuario guardado
-        const saved = localStorage.getItem('usuario');
-        return saved ? JSON.parse(saved) : null;
-    });
+const limpiarSesion = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('usuario');
+};
+
+const leerUsuarioInicial = () => {
+    const token = localStorage.getItem('token');
+    if (!token || !tokenVigente(token)) {
+        limpiarSesion();
+        return null;
+    }
+    try {
+        return JSON.parse(localStorage.getItem('usuario') || 'null');
+    } catch {
+        return null;
+    }
+};
+
+export function AuthProvider({ children }) {
+    const [usuario, setUsuario] = useState(leerUsuarioInicial);
+
+    const logout = useCallback(() => {
+        limpiarSesion();
+        setUsuario(null);
+        window.location.href = '/login';
+    }, []);
 
     const login = (userData, token) => {
-        // Guarda el token y usuario en localStorage
         localStorage.setItem('token', token);
         localStorage.setItem('usuario', JSON.stringify(userData));
         setUsuario(userData);
     };
 
-    const logout = () => {
-        // Limpia todo al cerrar sesión
-        localStorage.removeItem('token');
-        localStorage.removeItem('usuario');
-        setUsuario(null);
-    };
+    // Cierra la sesión automáticamente cuando el token venza
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!usuario || !token) return;
+        try {
+            const exp = JSON.parse(atob(token.split('.')[1])).exp * 1000;
+            const restante = exp - Date.now();
+            if (restante <= 0) { logout(); return; }
+            const t = setTimeout(logout, restante);
+            return () => clearTimeout(t);
+        } catch {
+            logout();
+        }
+    }, [usuario, logout]);
 
     return (
         <AuthContext.Provider value={{ usuario, login, logout }}>

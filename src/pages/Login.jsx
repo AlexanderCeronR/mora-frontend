@@ -7,6 +7,14 @@ import { LogIn, Eye, EyeOff } from 'lucide-react';
 import PageTransition from '../components/ui/PageTransition';
 import ThemeSwitch from '../components/ui/ThemeSwitch';
 
+const RUTA_POR_ROL = {
+    ADMIN: '/dashboard',
+    SUPERVISOR: '/supervisor',
+    MESERO: '/pedidos',
+    CAJERO: '/caja',
+    COCINA: '/cocina',
+};
+
 export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -30,9 +38,7 @@ export default function Login() {
             const { token, nombre, rol, id } = response.data;
             login({ id, nombre, email, rol }, token);
             showToast(`Bienvenido, ${nombre}`, 'success');
-            if (rol === 'ADMIN') navigate('/dashboard');
-            else if (rol === 'MESERO') navigate('/pedidos');
-            else if (rol === 'CAJERO') navigate('/caja');
+            navigate(RUTA_POR_ROL[rol] || '/mesas');
         } catch {
             showToast('Email o contraseña incorrectos', 'error');
         } finally {
@@ -40,155 +46,145 @@ export default function Login() {
         }
     };
 
+    const focoOn = e => {
+        e.target.style.borderColor = 'var(--color-primary)';
+        e.target.style.boxShadow = '0 0 0 3px rgba(128,128,128,0.2)';
+    };
+    const focoOff = e => {
+        e.target.style.borderColor = 'var(--border-default)';
+        e.target.style.boxShadow = 'none';
+    };
+
     return (
-    <PageTransition>
-        <div style={styles.container}>
+        <PageTransition>
             <div style={styles.wrapper}>
 
-            {/* Panel izquierdo — decorativo */}
-            <div style={styles.leftPanel}>
-                <div style={styles.leftContent}>
-                    <div style={styles.logoWrap}>
-                        <div style={styles.logoIcon}>M</div>
-                        <span style={styles.logoText}>MORA</span>
-                    </div>
-                    <h1 style={styles.leftTitle}>
-                        Gestiona tu restaurante con inteligencia
-                    </h1>
-                    <p style={styles.leftSub}>
-                        Mesas, pedidos, caja y análisis en una sola plataforma moderna.
-                    </p>
-
-                    {/* Features */}
-                    <div style={styles.features}>
-                        {[
-                            '🍽️  Gestión de mesas en tiempo real',
-                            '📋  Pedidos con seguimiento de estados',
-                            '💳  Caja y pagos integrados',
-                            '📊  Dashboard con análisis inteligente',
-                            '🤖  Asistente IA para tus ventas',
-                        ].map((f, i) => (
-                            <div key={i} style={styles.featureItem}>
-                                <div style={styles.featureDot} />
-                                <span style={styles.featureText}>{f}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Decoración de fondo */}
-                <div style={styles.decorCircle1} />
-                <div style={styles.decorCircle2} />
-                <div style={styles.decorCircle3} />
-            </div>
-
-            {/* Panel derecho — formulario */}
-            <div style={styles.rightPanel}>
-                <div style={styles.themeCorner}>
-                                <ThemeSwitch />
-                </div>
-                <div style={styles.formWrap}>
-                    <div style={styles.formHeader}>
-                        <h2 style={styles.formTitle}>Iniciar sesión</h2>
-                        <p style={styles.formSub}>
-                            Accede a tu panel de administración
+                {/* Panel izquierdo — decorativo */}
+                <div className="login-left" style={styles.leftPanel}>
+                    <div style={styles.leftContent}>
+                        <div style={styles.logoWrap}>
+                            <div style={styles.logoIcon}>M</div>
+                            <span style={styles.logoText}>MORA</span>
+                        </div>
+                        <h1 style={styles.leftTitle}>
+                            Gestiona tu restaurante con inteligencia
+                        </h1>
+                        <p style={styles.leftSub}>
+                            Mesas, pedidos, caja y análisis en una sola
+                            plataforma moderna.
                         </p>
+
+                        <div style={styles.features}>
+                            {[
+                                'Gestión de mesas en tiempo real',
+                                'Pedidos con seguimiento de estados',
+                                'Caja y pagos integrados',
+                                'Dashboard con análisis inteligente',
+                                'Pedidos por QR para tus clientes',
+                            ].map((f, i) => (
+                                <div key={i} style={styles.featureItem}>
+                                    <div style={styles.featureDot} />
+                                    <span style={styles.featureText}>{f}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} style={styles.form}>
-                        {/* Email */}
-                        <div style={styles.field}>
-                            <label style={styles.label}>
-                                Correo electrónico
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                placeholder="admin@mora.com"
-                                style={styles.input}
-                                onFocus={e => {
-                                    e.target.style.borderColor =
-                                        'var(--color-primary)';
-                                    e.target.style.boxShadow =
-                                        '0 0 0 3px rgba(68,49,153,0.15)';
-                                }}
-                                onBlur={e => {
-                                    e.target.style.borderColor =
-                                        'var(--border-default)';
-                                    e.target.style.boxShadow = 'none';
-                                }}
-                            />
+                    <div style={styles.decorCircle1} />
+                    <div style={styles.decorCircle2} />
+                    <div style={styles.decorCircle3} />
+                </div>
+
+                {/* Panel derecho — formulario */}
+                <div className="login-right" style={styles.rightPanel}>
+                    <div style={styles.themeCorner}>
+                        <ThemeSwitch />
+                    </div>
+
+                    <div style={styles.formWrap}>
+                        <div style={styles.formHeader}>
+                            <h2 style={styles.formTitle}>Iniciar sesión</h2>
+                            <p style={styles.formSub}>
+                                Accede a tu panel de administración
+                            </p>
                         </div>
 
-                        {/* Password */}
-                        <div style={styles.field}>
-                            <label style={styles.label}>Contraseña</label>
-                            <div style={styles.passwordWrap}>
+                        <form onSubmit={handleSubmit} style={styles.form}>
+                            <div style={styles.field}>
+                                <label style={styles.label}>
+                                    Correo electrónico
+                                </label>
                                 <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    placeholder="••••••••"
-                                    style={{
-                                        ...styles.input,
-                                        paddingRight: '44px'
-                                    }}
-                                    onFocus={e => {
-                                        e.target.style.borderColor =
-                                            'var(--color-primary)';
-                                        e.target.style.boxShadow =
-                                            '0 0 0 3px rgba(68,49,153,0.15)';
-                                    }}
-                                    onBlur={e => {
-                                        e.target.style.borderColor =
-                                            'var(--border-default)';
-                                        e.target.style.boxShadow = 'none';
-                                    }}
+                                    type="email"
+                                    value={email}
+                                    onChange={e => setEmail(e.target.value)}
+                                    placeholder="correo@ejemplo.com"
+                                    style={styles.input}
+                                    onFocus={focoOn}
+                                    onBlur={focoOff}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowPassword(!showPassword)}
-                                    style={styles.eyeBtn}>
-                                    {showPassword
-                                        ? <EyeOff size={16} />
-                                        : <Eye size={16} />}
-                                </button>
                             </div>
-                        </div>
 
-                        {/* Submit */}
+                            <div style={styles.field}>
+                                <label style={styles.label}>Contraseña</label>
+                                <div style={styles.passwordWrap}>
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        placeholder="••••••••"
+                                        style={{
+                                            ...styles.input,
+                                            paddingRight: '44px'
+                                        }}
+                                        onFocus={focoOn}
+                                        onBlur={focoOff}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setShowPassword(!showPassword)}
+                                        aria-label={showPassword
+                                            ? 'Ocultar contraseña'
+                                            : 'Mostrar contraseña'}
+                                        style={styles.eyeBtn}>
+                                        {showPassword
+                                            ? <EyeOff size={16} />
+                                            : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    ...styles.submitBtn,
+                                    opacity: loading ? 0.7 : 1,
+                                    cursor: loading
+                                        ? 'not-allowed' : 'pointer',
+                                }}>
+                                {loading
+                                    ? <div style={styles.submitSpinner} />
+                                    : <LogIn size={16} />}
+                                {loading
+                                    ? 'Iniciando sesión...'
+                                    : 'Iniciar sesión'}
+                            </button>
+                        </form>
+
                         <button
-                            type="submit"
-                            disabled={loading}
-                            style={{
-                                ...styles.submitBtn,
-                                opacity: loading ? 0.7 : 1,
-                                cursor: loading ? 'not-allowed' : 'pointer',
-                            }}>
-                            {loading ? (
-                                <div style={styles.submitSpinner} />
-                            ) : (
-                                <LogIn size={16} />
-                            )}
-                            {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                            onClick={() => navigate('/')}
+                            style={styles.backBtn}>
+                            ← Volver al inicio
                         </button>
-                    </form>
-
-                    {/* Volver */}
-                    <button
-                        onClick={() => navigate('/')}
-                        style={styles.backBtn}>
-                        ← Volver al inicio
-                    </button>
+                    </div>
                 </div>
             </div>
-        </div>
-        </div>
-    </PageTransition>
-);
+        </PageTransition>
+    );
 }
+
 const styles = {
     wrapper: {
         display: 'flex',
@@ -304,6 +300,13 @@ const styles = {
         justifyContent: 'center',
         padding: '60px 48px',
         backgroundColor: 'var(--bg-surface)',
+        position: 'relative',
+        flexShrink: 0,
+    },
+    themeCorner: {
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
     },
     formWrap: {
         width: '100%',
@@ -403,10 +406,5 @@ const styles = {
         cursor: 'pointer',
         padding: 0,
         transition: 'color var(--transition-fast)',
-    },
-    themeCorner: {
-        position: 'absolute',
-        top: '20px',
-        right: '20px',
     },
 };

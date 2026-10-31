@@ -2,7 +2,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import ThemeSwitch from '../ui/ThemeSwitch';
-
 import {
     LayoutDashboard, UtensilsCrossed, Table2,
     ShoppingBag, CreditCard, Users, LogOut,
@@ -10,57 +9,17 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-    {
-        path: '/dashboard',
-        label: 'Dashboard',
-        icon: LayoutDashboard,
-        roles: ['ADMIN', 'CAJERO']
-    },
-    {
-        path: '/supervisor',
-        label: 'Supervisor',
-        icon: ClipboardList,
-        roles: ['ADMIN', 'SUPERVISOR']
-    },
-    {
-        path: '/mesas',
-        label: 'Mesas',
-        icon: Table2,
-        roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR']
-    },
-    {
-        path: '/menu',
-        label: 'Menú',
-        icon: UtensilsCrossed,
-        roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR']
-    },
-    {
-        path: '/pedidos',
-        label: 'Pedidos',
-        icon: ShoppingBag,
-        roles: ['ADMIN', 'MESERO', 'SUPERVISOR']
-    },
-    {
-        path: '/caja',
-        label: 'Caja',
-        icon: CreditCard,
-        roles: ['ADMIN', 'CAJERO']
-    },
-    {
-        path: '/usuarios',
-        label: 'Usuarios',
-        icon: Users,
-        roles: ['ADMIN']
-    },
-    {
-        path: '/cocina',
-        label: 'Cocina',
-        icon: ChefHat,
-        roles: ['ADMIN', 'COCINA', 'SUPERVISOR']
-    },
+    { path: '/dashboard',  label: 'Dashboard',  icon: LayoutDashboard, roles: ['ADMIN', 'CAJERO'] },
+    { path: '/supervisor', label: 'Supervisor', icon: ClipboardList,   roles: ['ADMIN', 'SUPERVISOR'] },
+    { path: '/mesas',      label: 'Mesas',      icon: Table2,          roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR'] },
+    { path: '/menu',       label: 'Menú',       icon: UtensilsCrossed, roles: ['ADMIN', 'MESERO', 'CAJERO', 'SUPERVISOR'] },
+    { path: '/pedidos',    label: 'Pedidos',    icon: ShoppingBag,     roles: ['ADMIN', 'MESERO', 'SUPERVISOR'] },
+    { path: '/caja',       label: 'Caja',       icon: CreditCard,      roles: ['ADMIN', 'CAJERO'] },
+    { path: '/usuarios',   label: 'Usuarios',   icon: Users,           roles: ['ADMIN'] },
+    { path: '/cocina',     label: 'Cocina',     icon: ChefHat,         roles: ['ADMIN', 'COCINA', 'SUPERVISOR'] },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isMobile = false, abierto = true, onClose }) {
     const navigate = useNavigate();
     const location = useLocation();
     const { usuario, logout } = useAuth();
@@ -71,7 +30,13 @@ export default function Sidebar() {
     );
 
     return (
-        <aside style={styles.sidebar}>
+        <aside style={{
+            ...styles.sidebar,
+            transform: isMobile && !abierto
+                ? 'translateX(-100%)' : 'translateX(0)',
+            transition: 'transform 0.25s ease',
+            zIndex: isMobile ? 200 : 'var(--z-sidebar)',
+        }}>
             {/* Logo */}
             <div style={styles.logo} onClick={() => navigate('/')}>
                 <div style={styles.logoIcon}>M</div>
@@ -89,7 +54,10 @@ export default function Sidebar() {
                     return (
                         <button
                             key={item.path}
-                            onClick={() => navigate(item.path)}
+                            onClick={() => {
+                                navigate(item.path);
+                                onClose?.();
+                            }}
                             style={{
                                 ...styles.navItem,
                                 ...(active ? styles.navItemActive : {})
@@ -118,9 +86,8 @@ export default function Sidebar() {
                 })}
             </nav>
 
-            {/* Footer del sidebar */}
+            {/* Footer */}
             <div style={styles.sidebarFooter}>
-                {/* Info del usuario */}
                 <div style={styles.userInfo}>
                     <div style={styles.userAvatar}>
                         {usuario?.nombre?.charAt(0).toUpperCase()}
@@ -130,7 +97,7 @@ export default function Sidebar() {
                         <p style={styles.userRole}>{usuario?.rol}</p>
                     </div>
                 </div>
-                {/* Interruptor de tema */}
+
                 <div style={styles.themeRow}>
                     <span style={styles.themeLabel}>
                         {theme === 'dark' ? 'Modo oscuro' : 'Modo claro'}
@@ -138,15 +105,13 @@ export default function Sidebar() {
                     <ThemeSwitch />
                 </div>
 
-                {/* Logout */}
                 <button
                     onClick={logout}
                     style={styles.logoutBtn}
                     onMouseEnter={e => {
                         e.currentTarget.style.backgroundColor =
                             'var(--color-danger-10)';
-                        e.currentTarget.style.color =
-                            'var(--color-danger)';
+                        e.currentTarget.style.color = 'var(--color-danger)';
                         e.currentTarget.style.borderColor =
                             'var(--color-danger)';
                     }}
@@ -176,7 +141,6 @@ const styles = {
         top: 0,
         left: 0,
         bottom: 0,
-        zIndex: 'var(--z-sidebar)',
     },
     logo: {
         display: 'flex',
@@ -216,7 +180,7 @@ const styles = {
     },
     nav: {
         flex: 1,
-        padding: '12px 12px',
+        padding: '12px',
         display: 'flex',
         flexDirection: 'column',
         gap: '2px',
@@ -289,9 +253,7 @@ const styles = {
         fontSize: 'var(--text-sm)',
         flexShrink: 0,
     },
-    userDetails: {
-        overflow: 'hidden',
-    },
+    userDetails: { overflow: 'hidden' },
     userName: {
         color: 'var(--text-primary)',
         fontSize: 'var(--text-sm)',

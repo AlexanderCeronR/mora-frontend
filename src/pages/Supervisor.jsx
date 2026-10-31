@@ -10,6 +10,14 @@ import {
     CheckCircle, AlertCircle, RefreshCw
 } from 'lucide-react';
 
+const tenue = (color, pct = 30) =>
+    `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+
+const badgeEstado = (estado) =>
+    estado === 'PENDIENTE' ? 'warning' :
+    estado === 'EN_PREPARACION' ? 'info' :
+    estado === 'LISTO' ? 'primary' : 'success';
+
 export default function Supervisor() {
     const [dashboard, setDashboard] = useState(null);
     const [pedidosNuevos, setPedidosNuevos] = useState([]);
@@ -17,6 +25,7 @@ export default function Supervisor() {
     const [loading, setLoading] = useState(true);
     const [asignando, setAsignando] = useState(null);
     const [meseroSeleccionado, setMeseroSeleccionado] = useState({});
+    const [reasignando, setReasignando] = useState(null);
 
     const cargarDatos = useCallback(async () => {
         try {
@@ -37,7 +46,6 @@ export default function Supervisor() {
 
     useEffect(() => {
         cargarDatos();
-        // Polling cada 15 segundos
         const interval = setInterval(cargarDatos, 15000);
         return () => clearInterval(interval);
     }, [cargarDatos]);
@@ -67,13 +75,31 @@ export default function Supervisor() {
         }
     };
 
+    const reasignarPedido = async (pedidoId, nuevoId) => {
+        if (!nuevoId) return;
+        setReasignando(pedidoId);
+        try {
+            await axiosClient.patch(
+                `/supervisor/pedidos/${pedidoId}/reasignar/${nuevoId}`
+            );
+            showToast('Pedido reasignado', 'success');
+            cargarDatos();
+        } catch {
+            showToast('Error al reasignar', 'error');
+        } finally {
+            setReasignando(null);
+        }
+    };
+
     const cambiarDisponibilidad = async (meseroId, disponible) => {
         try {
             await axiosClient.patch(
                 `/supervisor/meseros/${meseroId}/disponibilidad?disponible=${!disponible}`
             );
             showToast(
-                !disponible ? 'Mesero marcado disponible' : 'Mesero marcado no disponible',
+                !disponible
+                    ? 'Marcado como disponible'
+                    : 'Marcado como no disponible',
                 'success'
             );
             cargarDatos();
@@ -93,7 +119,7 @@ export default function Supervisor() {
             <div style={styles.container}>
 
                 {/* KPIs */}
-                <div style={styles.kpiGrid}>
+                <div className="grid-2" style={styles.kpiGrid}>
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
@@ -127,13 +153,13 @@ export default function Supervisor() {
                             }}>
                                 {dashboard?.meserosDisponibles || 0}
                             </p>
-                            <p style={styles.kpiLabel}>Meseros disponibles</p>
+                            <p style={styles.kpiLabel}>Disponibles</p>
                         </div>
                     </Card>
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
-                            background: 'linear-gradient(135deg, #C13383, #E05454)'
+                            background: 'var(--gradient-danger)'
                         }}>
                             <ClipboardList size={18} color="white" />
                         </div>
@@ -144,7 +170,7 @@ export default function Supervisor() {
                             }}>
                                 {dashboard?.totalMeseros || 0}
                             </p>
-                            <p style={styles.kpiLabel}>Total meseros</p>
+                            <p style={styles.kpiLabel}>Total personal</p>
                         </div>
                     </Card>
                     <Card style={styles.kpiCard}>
@@ -156,14 +182,12 @@ export default function Supervisor() {
                                 <RefreshCw size={14} />
                                 Actualizar
                             </Button>
-                            <p style={styles.pollingTxt}>
-                                Auto cada 15s
-                            </p>
+                            <p style={styles.pollingTxt}>Auto cada 15s</p>
                         </div>
                     </Card>
                 </div>
 
-                <div style={styles.mainGrid}>
+                <div className="grid-2" style={styles.mainGrid}>
 
                     {/* Pedidos sin asignar */}
                     <div style={styles.section}>
@@ -180,18 +204,22 @@ export default function Supervisor() {
                         </h2>
 
                         {pedidosNuevos.length === 0 ? (
-                            <Card style={styles.vacioCaard}>
+                            <Card style={styles.vacioCard}>
                                 <CheckCircle
                                     size={32}
                                     color="var(--color-success)" />
-                                <p style={{ color: 'var(--text-muted)', marginTop: '8px' }}>
+                                <p style={{
+                                    color: 'var(--text-muted)',
+                                    marginTop: '8px'
+                                }}>
                                     Todos los pedidos están asignados
                                 </p>
                             </Card>
                         ) : (
                             <div style={styles.pedidosList}>
                                 {pedidosNuevos.map(pedido => (
-                                    <Card key={pedido.id} style={styles.pedidoCard}>
+                                    <Card key={pedido.id}
+                                        style={styles.pedidoCard}>
                                         <div style={styles.pedidoHeader}>
                                             <span style={styles.pedidoId}>
                                                 Pedido #{pedido.id}
@@ -214,14 +242,15 @@ export default function Supervisor() {
                                             ${pedido.total?.toLocaleString()}
                                         </p>
 
-                                        {/* Asignar mesero */}
-                                        <div style={styles.asignarRow}>
+                                        <div className="stack-mobile"
+                                            style={styles.asignarRow}>
                                             <select
                                                 value={meseroSeleccionado[pedido.id] || ''}
-                                                onChange={e => setMeseroSeleccionado(prev => ({
-                                                    ...prev,
-                                                    [pedido.id]: e.target.value
-                                                }))}
+                                                onChange={e =>
+                                                    setMeseroSeleccionado(prev => ({
+                                                        ...prev,
+                                                        [pedido.id]: e.target.value
+                                                    }))}
                                                 style={styles.select}>
                                                 <option value="">
                                                     Selecciona mesero...
@@ -236,7 +265,8 @@ export default function Supervisor() {
                                                 variant="primary"
                                                 size="sm"
                                                 disabled={asignando === pedido.id}
-                                                onClick={() => asignarMesero(pedido.id)}>
+                                                onClick={() =>
+                                                    asignarMesero(pedido.id)}>
                                                 {asignando === pedido.id
                                                     ? 'Asignando...'
                                                     : 'Asignar'}
@@ -248,26 +278,28 @@ export default function Supervisor() {
                         )}
                     </div>
 
-                    {/* Actividad de meseros */}
+                    {/* Actividad */}
                     <div style={styles.section}>
                         <h2 style={styles.sectionTitle}>
                             <Users size={16}
                                 color="var(--color-primary-light)" />
-                            Actividad de meseros
+                            Actividad del personal
                         </h2>
 
                         <div style={styles.meserosList}>
                             {dashboard?.actividadMeseros?.map(mesero => (
-                                <Card key={mesero.id} style={styles.meseroCard}>
+                                <Card key={mesero.id}
+                                    style={styles.meseroCard}>
                                     <div style={styles.meseroHeader}>
                                         <div style={styles.meseroAvatar}>
-                                            {mesero.nombre.charAt(0).toUpperCase()}
+                                            {(mesero.nombre || '?')
+                                                .charAt(0).toUpperCase()}
                                         </div>
                                         <div style={styles.meseroInfo}>
                                             <p style={styles.meseroNombre}>
                                                 {mesero.nombre}
                                             </p>
-                                            <p style={styles.mesesroPedidos}>
+                                            <p style={styles.meseroPedidos}>
                                                 {mesero.pedidosActivos} pedidos activos
                                             </p>
                                         </div>
@@ -279,78 +311,53 @@ export default function Supervisor() {
                                         </Badge>
                                     </div>
 
-                                    {/* Pedidos del mesero */}
-                                    {mesero.pedidos?.length > 0 && (
-                                        <div style={styles.mesesroPedidosList}>
+                                    {mesero.pedidos?.length > 0 ? (
+                                        <div style={styles.pedidosMesero}>
                                             {mesero.pedidos.map(p => (
                                                 <div key={p.id}
-                                                    style={styles.meserosPedidoItem}>
-                                                    <span style={styles.meserosPedidoMesa}>
-                                                        Mesa {p.mesa}
-                                                    </span>
-                                                    <Badge variant={
-                                                        p.estado === 'PENDIENTE' ? 'warning' :
-                                                        p.estado === 'EN_PREPARACION' ? 'info' :
-                                                        p.estado === 'LISTO' ? 'primary' :
-                                                        'success'
-                                                    }>
-                                                        {p.estado.replace('_', ' ')}
-                                                    </Badge>
-                                                    <span style={styles.meserosPedidoTotal}>
-                                                        ${p.total?.toLocaleString()}
-                                                    </span>
+                                                    style={styles.pedidoFila}>
+                                                    <div style={styles.pedidoFilaTop}>
+                                                        <span style={styles.pedidoMesa}>
+                                                            Mesa {p.mesa}
+                                                        </span>
+                                                        <Badge variant={
+                                                            badgeEstado(p.estado)}>
+                                                            {p.estado
+                                                                .replace('_', ' ')}
+                                                        </Badge>
+                                                        <span style={styles.pedidoMonto}>
+                                                            ${p.total?.toLocaleString()}
+                                                        </span>
+                                                    </div>
+                                                    <select
+                                                        value=""
+                                                        disabled={reasignando === p.id}
+                                                        onChange={e =>
+                                                            reasignarPedido(
+                                                                p.id, e.target.value)}
+                                                        style={styles.selectMini}>
+                                                        <option value="">
+                                                            Reasignar a...
+                                                        </option>
+                                                        {meserosDisponibles
+                                                            .filter(m =>
+                                                                m.id !== mesero.id)
+                                                            .map(m => (
+                                                                <option key={m.id}
+                                                                    value={m.id}>
+                                                                    {m.nombre}
+                                                                </option>
+                                                            ))}
+                                                    </select>
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
-
-                                    {mesero.pedidos?.length === 0 && (
+                                    ) : (
                                         <p style={styles.sinPedidos}>
                                             Sin pedidos activos
                                         </p>
                                     )}
 
-                                    
-{mesero.pedidos?.map(p => (
-    <div key={p.id} style={styles.meserosPedidoItem}>
-        <span style={styles.meserosPedidoMesa}>
-            Mesa {p.mesa}
-        </span>
-        <Badge variant={
-            p.estado === 'PENDIENTE' ? 'warning' :
-            p.estado === 'EN_PREPARACION' ? 'info' :
-            p.estado === 'LISTO' ? 'primary' :
-            'success'
-        }>
-            {p.estado.replace('_', ' ')}
-        </Badge>
-        <span style={styles.meserosPedidoTotal}>
-            ${p.total?.toLocaleString()}
-        </span>
-        {/* Botón reasignar */}
-        <button
-            onClick={() => {
-                const nuevoMeseroId = prompt(
-                    'ID del nuevo mesero:'
-                );
-                if (nuevoMeseroId) {
-                    axiosClient.patch(
-                        `/supervisor/pedidos/${p.id}/reasignar/${nuevoMeseroId}`
-                    ).then(() => {
-                        showToast('Pedido reasignado', 'success');
-                        cargarDatos();
-                    }).catch(() => {
-                        showToast('Error al reasignar', 'error');
-                    });
-                }
-            }}
-            style={styles.reasignarBtn}>
-            Reasignar
-        </button>
-    </div>
-))}
-
-                                    {/* Toggle disponibilidad */}
                                     <button
                                         onClick={() => cambiarDisponibilidad(
                                             mesero.id, mesero.disponible
@@ -360,9 +367,10 @@ export default function Supervisor() {
                                             color: mesero.disponible
                                                 ? 'var(--color-danger)'
                                                 : 'var(--color-success)',
-                                            borderColor: mesero.disponible
-                                                ? 'var(--color-danger)30'
-                                                : 'var(--color-success)30',
+                                            borderColor: tenue(
+                                                mesero.disponible
+                                                    ? 'var(--color-danger)'
+                                                    : 'var(--color-success)'),
                                         }}>
                                         {mesero.disponible
                                             ? 'Marcar no disponible'
@@ -400,7 +408,8 @@ const styles = {
     },
     kpiGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
         gap: 'var(--space-4)',
     },
     kpiCard: {
@@ -452,6 +461,7 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-4)',
+        minWidth: 0,
     },
     sectionTitle: {
         fontSize: 'var(--text-base)',
@@ -470,7 +480,7 @@ const styles = {
         fontSize: 'var(--text-xs)',
         fontWeight: 'var(--font-bold)',
     },
-    vacioCaard: {
+    vacioCard: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -526,6 +536,7 @@ const styles = {
     },
     select: {
         flex: 1,
+        minWidth: 0,
         padding: '9px 12px',
         borderRadius: 'var(--radius-md)',
         border: '1px solid var(--border-default)',
@@ -535,6 +546,18 @@ const styles = {
         fontFamily: 'var(--font-sans)',
         outline: 'none',
         cursor: 'pointer',
+    },
+    selectMini: {
+        padding: '5px 8px',
+        borderRadius: 'var(--radius-sm)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-surface)',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-xs)',
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        cursor: 'pointer',
+        width: '100%',
     },
     meserosList: {
         display: 'flex',
@@ -566,6 +589,7 @@ const styles = {
     },
     meseroInfo: {
         flex: 1,
+        minWidth: 0,
     },
     meseroNombre: {
         fontSize: 'var(--text-sm)',
@@ -573,31 +597,37 @@ const styles = {
         color: 'var(--text-primary)',
         margin: 0,
     },
-    mesesroPedidos: {
+    meseroPedidos: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)',
         margin: '2px 0 0 0',
     },
-    mesesroPedidosList: {
+    pedidosMesero: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        gap: '10px',
         padding: 'var(--space-3)',
         backgroundColor: 'var(--bg-elevated)',
         borderRadius: 'var(--radius-md)',
     },
-    meserosPedidoItem: {
+    pedidoFila: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+    },
+    pedidoFilaTop: {
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-3)',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
     },
-    meserosPedidoMesa: {
+    pedidoMesa: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-secondary)',
         minWidth: '50px',
     },
-    meserosPedidoTotal: {
+    pedidoMonto: {
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)',
     },
@@ -619,16 +649,4 @@ const styles = {
         width: '100%',
         transition: 'all var(--transition-fast)',
     },
-
-    reasignarBtn: {
-    padding: '3px 8px',
-    borderRadius: 'var(--radius-sm)',
-    border: '1px solid var(--color-warning)30',
-    backgroundColor: 'transparent',
-    color: 'var(--color-warning)',
-    fontSize: 'var(--text-xs)',
-    fontFamily: 'var(--font-sans)',
-    cursor: 'pointer',
-    },
 };
-

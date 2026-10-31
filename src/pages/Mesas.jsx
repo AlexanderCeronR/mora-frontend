@@ -11,13 +11,15 @@ import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/ui/PageTransition';
 import { QRCodeSVG } from 'qrcode.react';
-import { useTheme } from '../context/ThemeContext';
 
 const estadoConfig = {
     LIBRE:     { badge: 'success', label: 'Libre',     color: 'var(--color-success)' },
     OCUPADA:   { badge: 'danger',  label: 'Ocupada',   color: 'var(--color-danger)' },
     RESERVADA: { badge: 'warning', label: 'Reservada', color: 'var(--color-warning)' },
 };
+
+const tenue = (color, pct = 30) =>
+    `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 
 export default function Mesas() {
     const [mesas, setMesas] = useState([]);
@@ -26,9 +28,11 @@ export default function Mesas() {
     const [modalCrear, setModalCrear] = useState(false);
     const [nuevaMesa, setNuevaMesa] = useState({ numero: '', capacidad: '' });
     const { confirm, config } = useConfirm();
-    const { theme } = useTheme();
     const [usuario] = useState(() =>
         JSON.parse(localStorage.getItem('usuario') || '{}'));
+
+    const esAdmin = usuario?.rol === 'ADMIN';
+    const puedeCambiarEstado = ['ADMIN', 'SUPERVISOR'].includes(usuario?.rol);
 
     useEffect(() => { cargarMesas(); }, []);
 
@@ -72,21 +76,21 @@ export default function Mesas() {
         }
     };
 
-   const eliminarMesa = async (id) => {
-    const ok = await confirm({
-        titulo: '¿Eliminar mesa?',
-        mensaje: 'Esta acción no se puede deshacer.',
-        variante: 'danger'
-    });
-    if (!ok) return;
-    try {
-        await axiosClient.delete(`/mesas/${id}`);
-        showToast('Mesa eliminada', 'success');
-        cargarMesas();
-    } catch {
-        showToast('No se puede eliminar una mesa ocupada', 'error');
-    }
-};
+    const eliminarMesa = async (id) => {
+        const ok = await confirm({
+            titulo: '¿Eliminar mesa?',
+            mensaje: 'Esta acción no se puede deshacer.',
+            variante: 'danger'
+        });
+        if (!ok) return;
+        try {
+            await axiosClient.delete(`/mesas/${id}`);
+            showToast('Mesa eliminada', 'success');
+            cargarMesas();
+        } catch {
+            showToast('No se puede eliminar una mesa ocupada', 'error');
+        }
+    };
 
     const mesasFiltradas = filtro === 'TODOS'
         ? mesas
@@ -105,211 +109,220 @@ export default function Mesas() {
         </div>
     );
 
-return (
-    <PageTransition>
-        <div style={styles.container}>
-            {/* Resumen + Filtros */}
-            <div style={styles.topBar}>
-                <div style={styles.filtros}>
-                    {['TODOS', 'LIBRE', 'OCUPADA', 'RESERVADA'].map(f => (
-                        <button
-                            key={f}
-                            onClick={() => setFiltro(f)}
-                            style={{
-                                ...styles.filtroBtn,
-                                ...(filtro === f ? styles.filtroBtnActive : {})
-                            }}>
-                            {f === 'TODOS' ? 'Todas' : f.charAt(0) + f.slice(1).toLowerCase()}
-                            <span style={{
-                                ...styles.filtroBadge,
-                                backgroundColor: filtro === f
-                                    ? 'rgba(255,255,255,0.2)'
-                                    : 'var(--bg-overlay)'
-                            }}>
-                                {conteo[f]}
-                            </span>
-                        </button>
+    return (
+        <PageTransition>
+            <div style={styles.container}>
+
+                {/* Filtros + botón */}
+                <div className="stack-mobile" style={styles.topBar}>
+                    <div style={styles.filtros}>
+                        {['TODOS', 'LIBRE', 'OCUPADA', 'RESERVADA'].map(f => (
+                            <button
+                                key={f}
+                                onClick={() => setFiltro(f)}
+                                style={{
+                                    ...styles.filtroBtn,
+                                    ...(filtro === f
+                                        ? styles.filtroBtnActive : {})
+                                }}>
+                                {f === 'TODOS'
+                                    ? 'Todas'
+                                    : f.charAt(0) + f.slice(1).toLowerCase()}
+                                <span style={{
+                                    ...styles.filtroBadge,
+                                    backgroundColor: filtro === f
+                                        ? 'rgba(255,255,255,0.2)'
+                                        : 'var(--bg-overlay)'
+                                }}>
+                                    {conteo[f]}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {esAdmin && (
+                        <Button
+                            onClick={() => setModalCrear(true)}
+                            variant="primary"
+                            size="sm">
+                            <Plus size={15} />
+                            Nueva Mesa
+                        </Button>
+                    )}
+                </div>
+
+                {/* Estadísticas */}
+                <div className="grid-4" style={styles.statsRow}>
+                    {[
+                        { label: 'Libres', count: conteo.LIBRE, color: 'var(--color-success)' },
+                        { label: 'Ocupadas', count: conteo.OCUPADA, color: 'var(--color-danger)' },
+                        { label: 'Reservadas', count: conteo.RESERVADA, color: 'var(--color-warning)' },
+                        { label: 'Total', count: conteo.TODOS, color: 'var(--color-primary-light)' },
+                    ].map(s => (
+                        <Card key={s.label} style={styles.statCard}>
+                            <p style={{ ...styles.statNum, color: s.color }}>
+                                {s.count}
+                            </p>
+                            <p style={styles.statLabel}>{s.label}</p>
+                        </Card>
                     ))}
                 </div>
 
-                {usuario?.rol === 'ADMIN' && (
-                    <Button
-                        onClick={() => setModalCrear(true)}
-                        variant="primary"
-                        size="sm">
-                        <Plus size={15} />
-                        Nueva Mesa
-                    </Button>
-                )}
-            </div>
+                {/* Grid de mesas */}
+                <div style={styles.grid}>
+                    {mesasFiltradas.map(mesa => {
+                        const cfg = estadoConfig[mesa.estado]
+                            || estadoConfig.LIBRE;
+                        return (
+                            <Card key={mesa.id} style={{
+                                ...styles.mesaCard,
+                                borderColor: tenue(cfg.color, 40),
+                            }}>
+                                <div style={styles.mesaHeader}>
+                                    <div style={styles.mesaNumWrap}>
+                                        <Circle
+                                            size={10}
+                                            fill={cfg.color}
+                                            color={cfg.color} />
+                                        <span style={styles.mesaNum}>
+                                            Mesa {mesa.numero}
+                                        </span>
+                                    </div>
+                                    <Badge variant={cfg.badge}>
+                                        {cfg.label}
+                                    </Badge>
+                                </div>
 
-            {/* Stats rápidas */}
-            <div style={styles.statsRow}>
-                {[
-                    { label: 'Libres', count: conteo.LIBRE, color: 'var(--color-success)' },
-                    { label: 'Ocupadas', count: conteo.OCUPADA, color: 'var(--color-danger)' },
-                    { label: 'Reservadas', count: conteo.RESERVADA, color: 'var(--color-warning)' },
-                    { label: 'Total', count: conteo.TODOS, color: 'var(--color-primary-light)' },
-                ].map(s => (
-                    <Card key={s.label} style={styles.statCard}>
-                        <p style={{ ...styles.statNum, color: s.color }}>
-                            {s.count}
-                        </p>
-                        <p style={styles.statLabel}>{s.label}</p>
-                        {/* QR de la mesa */}
-                    </Card>
-                ))}
-            </div>
-
-            {/* Grid de mesas */}
-            <div style={styles.grid}>
-                {mesasFiltradas.map(mesa => {
-                    const cfg = estadoConfig[mesa.estado];
-                    return (
-                        <Card key={mesa.id} style={{
-                            ...styles.mesaCard,
-                            borderColor: cfg.color + '40',
-                        }}>
-                            {/* Header */}
-                            <div style={styles.mesaHeader}>
-                                <div style={styles.mesaNumWrap}>
-                                    <Circle
-                                        size={10}
-                                        fill={cfg.color}
-                                        color={cfg.color} />
-                                    <span style={styles.mesaNum}>
-                                        Mesa {mesa.numero}
+                                <div style={styles.capacidadRow}>
+                                    <Users size={14}
+                                        color="var(--text-muted)" />
+                                    <span style={styles.capacidadTxt}>
+                                        {mesa.capacidad} personas
                                     </span>
                                 </div>
-                                <Badge variant={cfg.badge}>
-                                    {cfg.label}
-                                </Badge>
-                            </div>
 
-                            {/* Capacidad */}
-                            <div style={styles.capacidadRow}>
-                                <Users size={14}
-                                    color="var(--text-muted)" />
-                                <span style={styles.capacidadTxt}>
-                                    {mesa.capacidad} personas
-                                </span>
-                            </div>
+                                {puedeCambiarEstado && (
+                                    <div style={styles.accionesEstado}>
+                                        {mesa.estado !== 'LIBRE' && (
+                                            <button
+                                                onClick={() => cambiarEstado(
+                                                    mesa.id, 'LIBRE')}
+                                                style={{
+                                                    ...styles.estadoBtn,
+                                                    color: 'var(--color-success)',
+                                                    borderColor: tenue('var(--color-success)'),
+                                                }}>
+                                                Liberar
+                                            </button>
+                                        )}
+                                        {mesa.estado !== 'OCUPADA' && (
+                                            <button
+                                                onClick={() => cambiarEstado(
+                                                    mesa.id, 'OCUPADA')}
+                                                style={{
+                                                    ...styles.estadoBtn,
+                                                    color: 'var(--color-danger)',
+                                                    borderColor: tenue('var(--color-danger)'),
+                                                }}>
+                                                Ocupar
+                                            </button>
+                                        )}
+                                        {mesa.estado !== 'RESERVADA' && (
+                                            <button
+                                                onClick={() => cambiarEstado(
+                                                    mesa.id, 'RESERVADA')}
+                                                style={{
+                                                    ...styles.estadoBtn,
+                                                    color: 'var(--color-warning)',
+                                                    borderColor: tenue('var(--color-warning)'),
+                                                }}>
+                                                Reservar
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
 
-                            {/* Acciones de estado */}
-                            <div style={styles.accionesEstado}>
-                                {mesa.estado !== 'LIBRE' && (
+                                {esAdmin && (
                                     <button
-                                        onClick={() => cambiarEstado(mesa.id, 'LIBRE')}
-                                        style={{
-                                            ...styles.estadoBtn,
-                                            color: 'var(--color-success)',
-                                            borderColor: 'var(--color-success)30',
-                                        }}>
-                                        Liberar
+                                        onClick={() => eliminarMesa(mesa.id)}
+                                        style={styles.eliminarBtn}>
+                                        Eliminar mesa
                                     </button>
                                 )}
-                                {mesa.estado !== 'OCUPADA' && (
-                                    <button
-                                        onClick={() => cambiarEstado(mesa.id, 'OCUPADA')}
-                                        style={{
-                                            ...styles.estadoBtn,
-                                            color: 'var(--color-danger)',
-                                            borderColor: 'var(--color-danger)30',
-                                        }}>
-                                        Ocupar
-                                    </button>
-                                )}
-                                {mesa.estado !== 'RESERVADA' && (
-                                    <button
-                                        onClick={() => cambiarEstado(mesa.id, 'RESERVADA')}
-                                        style={{
-                                            ...styles.estadoBtn,
-                                            color: 'var(--color-warning)',
-                                            borderColor: 'var(--color-warning)30',
-                                        }}>
-                                        Reservar
-                                    </button>
-                                )}
-                            </div>
 
-                            {/* Eliminar */}
-                            {usuario?.rol === 'ADMIN' && (
-                                <button
-                                    onClick={() => eliminarMesa(mesa.id)}
-                                    style={styles.eliminarBtn}>
-                                    Eliminar mesa
-                                </button>
-                            )}
-                            {/* QR de la mesa */}
-<div style={styles.qrWrap}>
-    <QRCodeSVG
-    value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
-    size={130}
-    bgColor={theme === 'light' ? '#ffffff' : 'transparent'}
-    fgColor={theme === 'light' ? '#000000' : '#f0f0ff'}
-    level="M"
-/>
-    <p style={styles.qrLabel}>Escanear para pedir</p>
-</div>
-                        </Card>
-                    );
-                })}
+                                {/* QR de la mesa */}
+                                <div style={styles.qrWrap}>
+                                    <div style={styles.qrBox}>
+                                        <QRCodeSVG
+                                            value={`https://mora-frontend-two.vercel.app/cliente/mesa/${mesa.id}`}
+                                            size={130}
+                                            bgColor="#ffffff"
+                                            fgColor="#000000"
+                                            level="M"
+                                        />
+                                    </div>
+                                    <p style={styles.qrLabel}>
+                                        Escanear para pedir
+                                    </p>
+                                </div>
+                            </Card>
+                        );
+                    })}
 
-                {mesasFiltradas.length === 0 && (
-                    <div style={styles.vacio}>
-                        <p style={{ color: 'var(--text-muted)' }}>
-                            No hay mesas {filtro !== 'TODOS'
-                                ? `en estado ${filtro}`
-                                : ''}
-                        </p>
-                    </div>
+                    {mesasFiltradas.length === 0 && (
+                        <div style={styles.vacio}>
+                            <p style={{ color: 'var(--text-muted)' }}>
+                                No hay mesas {filtro !== 'TODOS'
+                                    ? `en estado ${filtro}`
+                                    : ''}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Modal crear */}
+                {modalCrear && (
+                    <Modal
+                        title="Nueva Mesa"
+                        onClose={() => setModalCrear(false)}
+                        footer={
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    onClick={() => setModalCrear(false)}>
+                                    Cancelar
+                                </Button>
+                                <Button
+                                    variant="primary"
+                                    onClick={crearMesa}>
+                                    Crear Mesa
+                                </Button>
+                            </>
+                        }>
+                        <Input
+                            label="Número de mesa"
+                            type="number"
+                            value={nuevaMesa.numero}
+                            onChange={e => setNuevaMesa({
+                                ...nuevaMesa, numero: e.target.value
+                            })}
+                            placeholder="Ej: 5"
+                        />
+                        <Input
+                            label="Capacidad"
+                            type="number"
+                            value={nuevaMesa.capacidad}
+                            onChange={e => setNuevaMesa({
+                                ...nuevaMesa, capacidad: e.target.value
+                            })}
+                            placeholder="Ej: 4"
+                        />
+                    </Modal>
                 )}
             </div>
-
-            {/* Modal crear */}
-            {modalCrear && (
-                <Modal
-                    title="Nueva Mesa"
-                    onClose={() => setModalCrear(false)}
-                    footer={
-                        <>
-                            <Button
-                                variant="ghost"
-                                onClick={() => setModalCrear(false)}>
-                                Cancelar
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={crearMesa}>
-                                Crear Mesa
-                            </Button>
-                        </>
-                    }>
-                    <Input
-                        label="Número de mesa"
-                        type="number"
-                        value={nuevaMesa.numero}
-                        onChange={e => setNuevaMesa({
-                            ...nuevaMesa, numero: e.target.value
-                        })}
-                        placeholder="Ej: 5"
-                    />
-                    <Input
-                        label="Capacidad"
-                        type="number"
-                        value={nuevaMesa.capacidad}
-                        onChange={e => setNuevaMesa({
-                            ...nuevaMesa, capacidad: e.target.value
-                        })}
-                        placeholder="Ej: 4"
-                    />
-                </Modal>
-            )}
-        </div>
-        {config && <Confirm {...config} />}
-    </PageTransition>
-);
-
+            {config && <Confirm {...config} />}
+        </PageTransition>
+    );
 }
 
 const styles = {
@@ -361,7 +374,7 @@ const styles = {
     filtroBtnActive: {
         background: 'var(--gradient-primary)',
         color: 'white',
-        border: 'none',
+        border: '1px solid transparent',
     },
     filtroBadge: {
         padding: '1px 7px',
@@ -393,7 +406,8 @@ const styles = {
     },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
+        gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 230px), 1fr))',
         gap: 'var(--space-4)',
     },
     mesaCard: {
@@ -465,11 +479,17 @@ const styles = {
         justifyContent: 'center',
         gap: '8px',
         padding: 'var(--space-4)',
-        margin: '0 auto',
         width: '100%',
         boxSizing: 'border-box',
         backgroundColor: 'var(--bg-elevated)',
         borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-subtle)',
+    },
+    qrBox: {
+        backgroundColor: '#ffffff',
+        padding: '10px',
+        borderRadius: 'var(--radius-md)',
+        lineHeight: 0,
         border: '1px solid var(--border-subtle)',
     },
     qrLabel: {

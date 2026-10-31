@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import axiosClient from '../api/axiosClient';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -8,8 +8,8 @@ import { showToast } from '../components/ui/Toast';
 import { ChefHat, Clock, CheckCircle, Bell } from 'lucide-react';
 
 const estadoConfig = {
-    PENDIENTE:      { badge: 'warning', label: 'Pendiente',      siguiente: 'EN_PREPARACION', accion: 'Iniciar preparación' },
-    EN_PREPARACION: { badge: 'info',    label: 'En preparación', siguiente: 'LISTO',          accion: 'Marcar listo' },
+    PENDIENTE:      { badge: 'warning', label: 'Pendiente',      siguiente: 'EN_PREPARACION', accion: 'Iniciar preparación', borde: 'var(--color-warning)' },
+    EN_PREPARACION: { badge: 'info',    label: 'En preparación', siguiente: 'LISTO',          accion: 'Marcar listo',        borde: 'var(--color-info)' },
 };
 
 export default function Cocina() {
@@ -18,25 +18,30 @@ export default function Cocina() {
     const [loading, setLoading] = useState(true);
     const [avanzando, setAvanzando] = useState(null);
 
+    // IDs de pedidos listos ya conocidos (evita avisos repetidos)
+    const conocidos = useRef(null);
+
     const cargarDatos = useCallback(async () => {
         try {
             const [activosRes, listosRes] = await Promise.all([
                 axiosClient.get('/cocina/pedidos'),
                 axiosClient.get('/cocina/pedidos/listos'),
             ]);
-            
-            // Detectar pedidos nuevos que pasaron a LISTO
-            const nuevosListos = listosRes.data.filter(
-                p => !pedidosListos.find(pl => pl.id === p.id)
-            );
-            if (nuevosListos.length > 0 && pedidosListos.length > 0) {
-                nuevosListos.forEach(p => {
-                    showToast(
-                        `Pedido #${p.id} (Mesa ${p.mesa}) listo para ${p.mesero}`,
-                        'success'
-                    );
-                });
+
+            const idsListos = listosRes.data.map(p => p.id);
+
+            // La primera carga solo registra; no avisa
+            if (conocidos.current !== null) {
+                listosRes.data
+                    .filter(p => !conocidos.current.has(p.id))
+                    .forEach(p => {
+                        showToast(
+                            `Pedido #${p.id} (Mesa ${p.mesa}) listo para ${p.mesero}`,
+                            'success'
+                        );
+                    });
             }
+            conocidos.current = new Set(idsListos);
 
             setPedidos(activosRes.data);
             setPedidosListos(listosRes.data);
@@ -45,14 +50,13 @@ export default function Cocina() {
         } finally {
             setLoading(false);
         }
-    }, [pedidosListos]);
+    }, []);
 
     useEffect(() => {
         cargarDatos();
-        // Polling cada 10 segundos
         const interval = setInterval(cargarDatos, 10000);
         return () => clearInterval(interval);
-    }, []);
+    }, [cargarDatos]);
 
     const avanzarEstado = async (pedidoId, nuevoEstado) => {
         setAvanzando(pedidoId);
@@ -82,6 +86,13 @@ export default function Cocina() {
         return `${Math.floor(mins / 60)}h ${mins % 60}m`;
     };
 
+    const pendientes = pedidos.filter(p => p.estado === 'PENDIENTE').length;
+    const enPreparacion = pedidos
+        .filter(p => p.estado === 'EN_PREPARACION').length;
+
+    const cola = [...pedidos].sort((a, b) =>
+        new Date(a.fechaCreacion) - new Date(b.fechaCreacion));
+
     if (loading) return (
         <div style={styles.loading}>
             <div style={styles.spinner} />
@@ -93,7 +104,7 @@ export default function Cocina() {
             <div style={styles.container}>
 
                 {/* KPIs */}
-                <div style={styles.kpiGrid}>
+                <div className="grid-2" style={styles.kpiGrid}>
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
@@ -104,15 +115,11 @@ export default function Cocina() {
                         <div>
                             <p style={{
                                 ...styles.kpiValor,
-                                color: pedidos.filter(
-                                    p => p.estado === 'PENDIENTE'
-                                ).length > 0
+                                color: pendientes > 0
                                     ? 'var(--color-danger)'
                                     : 'var(--color-success)'
                             }}>
-                                {pedidos.filter(
-                                    p => p.estado === 'PENDIENTE'
-                                ).length}
+                                {pendientes}
                             </p>
                             <p style={styles.kpiLabel}>Pendientes</p>
                         </div>
@@ -129,9 +136,7 @@ export default function Cocina() {
                                 ...styles.kpiValor,
                                 color: 'var(--color-info)'
                             }}>
-                                {pedidos.filter(
-                                    p => p.estado === 'EN_PREPARACION'
-                                ).length}
+                                {enPreparacion}
                             </p>
                             <p style={styles.kpiLabel}>En preparación</p>
                         </div>
@@ -139,7 +144,7 @@ export default function Cocina() {
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
-                            background: 'linear-gradient(135deg, #22c55e, #16a34a)'
+                            background: 'var(--gradient-primary)'
                         }}>
                             <CheckCircle size={18} color="white" />
                         </div>
@@ -156,14 +161,14 @@ export default function Cocina() {
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
-                            background: 'linear-gradient(135deg, #E05454, #f59e0b)'
+                            background: 'var(--gradient-danger)'
                         }}>
                             <Bell size={18} color="white" />
                         </div>
                         <div>
                             <p style={{
                                 ...styles.kpiValor,
-                                color: 'var(--color-warning)'
+                                color: 'var(--text-primary)'
                             }}>
                                 {pedidos.length + pedidosListos.length}
                             </p>
@@ -172,22 +177,22 @@ export default function Cocina() {
                     </Card>
                 </div>
 
-                <div style={styles.mainGrid}>
+                <div className="grid-2" style={styles.mainGrid}>
 
-                    {/* Pedidos activos */}
+                    {/* Cola de cocina */}
                     <div style={styles.seccion}>
                         <h2 style={styles.seccionTitulo}>
                             <ChefHat size={16}
                                 color="var(--color-primary-light)" />
                             Cola de cocina
-                            {pedidos.length > 0 && (
+                            {cola.length > 0 && (
                                 <span style={styles.contadorBadge}>
-                                    {pedidos.length}
+                                    {cola.length}
                                 </span>
                             )}
                         </h2>
 
-                        {pedidos.length === 0 ? (
+                        {cola.length === 0 ? (
                             <Card style={styles.vacio}>
                                 <CheckCircle
                                     size={32}
@@ -201,90 +206,81 @@ export default function Cocina() {
                             </Card>
                         ) : (
                             <div style={styles.pedidosList}>
-                                {pedidos
-                                    .sort((a, b) =>
-                                        new Date(a.fechaCreacion) -
-                                        new Date(b.fechaCreacion)
-                                    )
-                                    .map(pedido => {
-                                        const cfg = estadoConfig[pedido.estado];
-                                        return (
-                                            <Card key={pedido.id}
-                                                style={{
-                                                    ...styles.pedidoCard,
-                                                    borderLeft: pedido.estado === 'PENDIENTE'
-                                                        ? '3px solid var(--color-warning)'
-                                                        : '3px solid var(--color-info)',
-                                                }}>
-                                                <div style={styles.pedidoHeader}>
-                                                    <div style={styles.pedidoTitulo}>
-                                                        <span style={styles.pedidoId}>
-                                                            Pedido #{pedido.id}
-                                                        </span>
-                                                        <span style={styles.mesaTag}>
-                                                            Mesa {pedido.mesa}
-                                                        </span>
-                                                    </div>
-                                                    <div style={styles.pedidoMeta}>
-                                                        <Badge variant={cfg.badge}>
-                                                            {cfg.label}
-                                                        </Badge>
-                                                        <span style={styles.tiempo}>
-                                                            <Clock size={12} />
-                                                            {tiempoTranscurrido(
-                                                                pedido.fechaCreacion
-                                                            )}
-                                                        </span>
-                                                    </div>
+                                {cola.map(pedido => {
+                                    const cfg = estadoConfig[pedido.estado]
+                                        || estadoConfig.PENDIENTE;
+                                    return (
+                                        <Card key={pedido.id} style={{
+                                            ...styles.pedidoCard,
+                                            borderLeftWidth: '3px',
+                                            borderLeftStyle: 'solid',
+                                            borderLeftColor: cfg.borde,
+                                        }}>
+                                            <div style={styles.pedidoHeader}>
+                                                <div style={styles.pedidoTitulo}>
+                                                    <span style={styles.pedidoId}>
+                                                        Pedido #{pedido.id}
+                                                    </span>
+                                                    <span style={styles.mesaTag}>
+                                                        Mesa {pedido.mesa}
+                                                    </span>
                                                 </div>
+                                                <div style={styles.pedidoMeta}>
+                                                    <Badge variant={cfg.badge}>
+                                                        {cfg.label}
+                                                    </Badge>
+                                                    <span style={styles.tiempo}>
+                                                        <Clock size={12} />
+                                                        {tiempoTranscurrido(
+                                                            pedido.fechaCreacion)}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                                                {/* Productos */}
-                                                <div style={styles.productos}>
-                                                    {pedido.detalles?.map((d, i) => (
-                                                        <div key={i}
-                                                            style={styles.productoItem}>
+                                            <div style={styles.productos}>
+                                                {pedido.detalles?.map((d, i) => (
+                                                    <div key={i}
+                                                        style={styles.productoItem}>
+                                                        <div style={styles.productoFila}>
                                                             <span style={styles.productoCantidad}>
                                                                 {d.cantidad}×
                                                             </span>
                                                             <span style={styles.productoNombre}>
                                                                 {d.producto}
                                                             </span>
-                                                            {d.notas && (
-                                                                <span style={styles.productoNota}>
-                                                                    ({d.notas})
-                                                                </span>
-                                                            )}
                                                         </div>
-                                                    ))}
-                                                </div>
+                                                        {d.notas && (
+                                                            <span style={styles.productoNota}>
+                                                                Nota: {d.notas}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
 
-                                                {/* Mesero */}
-                                                <p style={styles.meseroInfo}>
-                                                    Mesero: {pedido.mesero}
-                                                </p>
+                                            <p style={styles.meseroInfo}>
+                                                Mesero: {pedido.mesero}
+                                            </p>
 
-                                                {/* Acción */}
-                                                <Button
-                                                    variant={pedido.estado === 'PENDIENTE'
-                                                        ? 'primary' : 'accent'}
-                                                    fullWidth
-                                                    disabled={avanzando === pedido.id}
-                                                    onClick={() => avanzarEstado(
-                                                        pedido.id,
-                                                        cfg.siguiente
-                                                    )}>
-                                                    {avanzando === pedido.id
-                                                        ? 'Actualizando...'
-                                                        : cfg.accion}
-                                                </Button>
-                                            </Card>
-                                        );
-                                    })}
+                                            <Button
+                                                variant={pedido.estado === 'PENDIENTE'
+                                                    ? 'primary' : 'accent'}
+                                                fullWidth
+                                                disabled={avanzando === pedido.id}
+                                                onClick={() => avanzarEstado(
+                                                    pedido.id, cfg.siguiente)}>
+                                                {avanzando === pedido.id
+                                                    ? 'Actualizando...'
+                                                    : cfg.accion}
+                                            </Button>
+                                        </Card>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
 
-                    {/* Pedidos listos esperando mesero */}
+                    {/* Listos */}
                     <div style={styles.seccion}>
                         <h2 style={styles.seccionTitulo}>
                             <Bell size={16}
@@ -311,7 +307,9 @@ export default function Cocina() {
                                 {pedidosListos.map(pedido => (
                                     <Card key={pedido.id} style={{
                                         ...styles.pedidoCard,
-                                        borderLeft: '3px solid var(--color-success)',
+                                        borderLeftWidth: '3px',
+                                        borderLeftStyle: 'solid',
+                                        borderLeftColor: 'var(--color-success)',
                                     }}>
                                         <div style={styles.pedidoHeader}>
                                             <div style={styles.pedidoTitulo}>
@@ -323,21 +321,20 @@ export default function Cocina() {
                                                 </span>
                                             </div>
                                             <Badge variant="success">
-                                                Listo ✓
+                                                Listo
                                             </Badge>
                                         </div>
                                         <p style={{
                                             ...styles.meseroInfo,
-                                            color: 'var(--color-success)',
+                                            color: 'var(--text-primary)',
                                             fontWeight: 'var(--font-semibold)',
                                         }}>
-                                            → Notificado a: {pedido.mesero}
+                                            Para: {pedido.mesero}
                                         </p>
                                         <p style={styles.tiempo}>
                                             <Clock size={12} />
                                             {tiempoTranscurrido(
-                                                pedido.fechaCreacion
-                                            )}
+                                                pedido.fechaCreacion)}
                                         </p>
                                     </Card>
                                 ))}
@@ -376,7 +373,8 @@ const styles = {
     },
     kpiGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
         gap: 'var(--space-4)',
     },
     kpiCard: {
@@ -416,6 +414,7 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-4)',
+        minWidth: 0,
     },
     seccionTitulo: {
         fontSize: 'var(--text-base)',
@@ -450,18 +449,19 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         gap: 'var(--space-3)',
-        borderLeft: '3px solid transparent',
     },
     pedidoHeader: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'flex-start',
         gap: 'var(--space-2)',
+        flexWrap: 'wrap',
     },
     pedidoTitulo: {
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-2)',
+        flexWrap: 'wrap',
     },
     pedidoId: {
         fontSize: 'var(--text-base)',
@@ -487,16 +487,22 @@ const styles = {
         gap: '4px',
         fontSize: 'var(--text-xs)',
         color: 'var(--text-muted)',
+        margin: 0,
     },
     productos: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        gap: '8px',
         padding: 'var(--space-3)',
         backgroundColor: 'var(--bg-elevated)',
         borderRadius: 'var(--radius-md)',
     },
     productoItem: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+    },
+    productoFila: {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
@@ -516,6 +522,7 @@ const styles = {
         fontSize: 'var(--text-xs)',
         color: 'var(--color-warning)',
         fontStyle: 'italic',
+        paddingLeft: '32px',
     },
     meseroInfo: {
         fontSize: 'var(--text-sm)',

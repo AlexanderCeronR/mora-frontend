@@ -1,144 +1,137 @@
-import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Table2, ShoppingBag, CreditCard,
-    BarChart2, Shield, Sparkles,
-    ArrowRight, Check
+    BarChart2, Shield, QrCode,
+    ArrowRight, Check, Sparkles
 } from 'lucide-react';
 import ThemeSwitch from '../components/ui/ThemeSwitch';
 
+const features = [
+    {
+        icon: Table2,
+        titulo: 'Gestión de Mesas',
+        desc: 'Control en tiempo real del estado de cada mesa: libre, ocupada o reservada.',
+    },
+    {
+        icon: ShoppingBag,
+        titulo: 'Pedidos Inteligentes',
+        desc: 'Seguimiento de estados desde cocina hasta la entrega, con asignación automática de meseros.',
+    },
+    {
+        icon: QrCode,
+        titulo: 'Pedidos por QR',
+        desc: 'El cliente escanea el código de su mesa, ve el menú con fotos, pide y sigue el estado de su pedido.',
+    },
+    {
+        icon: CreditCard,
+        titulo: 'Caja y Facturas',
+        desc: 'Pagos en efectivo, tarjeta o transferencia, con historial y factura en PDF.',
+    },
+    {
+        icon: BarChart2,
+        titulo: 'Dashboard y Analítica',
+        desc: 'Gráficas en tiempo real y métricas clave del negocio.',
+    },
+    {
+        icon: Shield,
+        titulo: 'Roles y Seguridad',
+        desc: 'Acceso por roles con autenticación JWT y sesiones con expiración.',
+    },
+];
+
+const roles = [
+    {
+        rol: 'ADMIN',
+        permisos: [
+            'Gestión completa del sistema',
+            'Crear y administrar usuarios',
+            'Dashboard y analítica',
+            'Configurar mesas y menú',
+        ],
+    },
+    {
+        rol: 'SUPERVISOR',
+        permisos: [
+            'Asignar y reasignar pedidos',
+            'Ver la actividad de los meseros',
+            'Atender mesas en contingencias',
+            'Supervisar la cocina',
+        ],
+    },
+    {
+        rol: 'MESERO',
+        permisos: [
+            'Ver mesas disponibles',
+            'Gestionar sus pedidos asignados',
+            'Avanzar estados de pedidos',
+            'Consultar el menú',
+        ],
+    },
+    {
+        rol: 'COCINA',
+        permisos: [
+            'Ver la cola de preparación',
+            'Iniciar la preparación',
+            'Marcar pedidos como listos',
+            'Notificar al mesero',
+        ],
+    },
+    {
+        rol: 'CAJERO',
+        permisos: [
+            'Ver pedidos entregados',
+            'Registrar pagos',
+            'Descargar facturas',
+            'Ver historial de caja',
+        ],
+    },
+];
+
+const flujo = [
+    { num: '01', titulo: 'Mesa', desc: 'El cliente escanea el QR' },
+    { num: '02', titulo: 'Pedido', desc: 'Elige y confirma sus productos' },
+    { num: '03', titulo: 'Asignación', desc: 'Se asigna un mesero' },
+    { num: '04', titulo: 'Cocina', desc: 'Se prepara y se avisa al mesero' },
+    { num: '05', titulo: 'Cobro', desc: 'El cajero registra el pago' },
+];
+
+const datos = [
+    { num: '5', label: 'Roles de usuario' },
+    { num: '4', label: 'Estados de pedido' },
+    { num: '3', label: 'Métodos de pago' },
+];
+
 export default function Landing() {
     const navigate = useNavigate();
-    const [contador, setContador] = useState({
-        mesas: 0, pedidos: 0, usuarios: 0
-    });
-
-    useEffect(() => {
-        const metas = { mesas: 20, pedidos: 500, usuarios: 50 };
-        const pasos = 60;
-        let paso = 0;
-        const timer = setInterval(() => {
-            paso++;
-            const p = paso / pasos;
-            setContador({
-                mesas: Math.round(metas.mesas * p),
-                pedidos: Math.round(metas.pedidos * p),
-                usuarios: Math.round(metas.usuarios * p),
-            });
-            if (paso >= pasos) clearInterval(timer);
-        }, 2000 / pasos);
-        return () => clearInterval(timer);
-    }, []);
-
-    const features = [
-        {
-            icon: Table2,
-            titulo: 'Gestión de Mesas',
-            desc: 'Control en tiempo real del estado de cada mesa — libre, ocupada o reservada.',
-            color: '#443199',
-        },
-        {
-            icon: ShoppingBag,
-            titulo: 'Pedidos Inteligentes',
-            desc: 'Crea y gestiona pedidos con seguimiento de estados desde cocina hasta entrega.',
-            color: '#792CA2',
-        },
-        {
-            icon: CreditCard,
-            titulo: 'Caja y Pagos',
-            desc: 'Registra pagos en efectivo, tarjeta o transferencia con historial completo.',
-            color: '#C13383',
-        },
-        {
-            icon: BarChart2,
-            titulo: 'Dashboard & Analytics',
-            desc: 'Analiza ventas con gráficas en tiempo real y métricas clave del negocio.',
-            color: '#E05454',
-        },
-        {
-            icon: Sparkles,
-            titulo: 'Asistente con IA',
-            desc: 'Pregúntale a la IA sobre el rendimiento de tu restaurante y obtén insights.',
-            color: '#792CA2',
-        },
-        {
-            icon: Shield,
-            titulo: 'Roles y Seguridad',
-            desc: 'Control de acceso por roles: Admin, Mesero y Cajero con JWT.',
-            color: '#443199',
-        },
-    ];
-
-    const roles = [
-        {
-            rol: 'ADMIN',
-            color: '#f59e0b',
-            gradient: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-            permisos: [
-                'Gestión completa del sistema',
-                'Crear y administrar usuarios',
-                'Acceso al dashboard y analytics',
-                'Configurar mesas y menú',
-            ]
-        },
-        {
-            rol: 'MESERO',
-            color: '#443199',
-            gradient: 'var(--gradient-primary)',
-            permisos: [
-                'Ver mesas disponibles',
-                'Crear y gestionar pedidos',
-                'Avanzar estados de pedidos',
-                'Consultar el menú',
-            ]
-        },
-        {
-            rol: 'CAJERO',
-            color: '#22c55e',
-            gradient: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            permisos: [
-                'Ver pedidos entregados',
-                'Registrar pagos',
-                'Ver historial de caja',
-                'Acceso al dashboard',
-            ]
-        },
-    ];
-
-    const flujo = [
-        { num: '01', titulo: 'Login', desc: 'Accede con tu rol asignado' },
-        { num: '02', titulo: 'Mesa', desc: 'Asigna una mesa disponible' },
-        { num: '03', titulo: 'Pedido', desc: 'Crea el pedido con productos' },
-        { num: '04', titulo: 'Cocina', desc: 'Sigue el estado en tiempo real' },
-        { num: '05', titulo: 'Cobro', desc: 'El cajero registra el pago' },
-    ];
 
     return (
         <div style={styles.page}>
 
             {/* Navbar */}
-            <nav style={styles.nav}>
+            <nav className="land-nav" style={styles.nav}>
                 <div style={styles.navLogo}>
                     <div style={styles.navLogoIcon}>M</div>
                     <span style={styles.navLogoText}>MORA</span>
                 </div>
                 <div style={styles.navRight}>
-    <span style={styles.navSub}>
-        Manager Of Restaurant Administration
-    </span>
-    <ThemeSwitch />
-    <button onClick={() => navigate('/login')} style={styles.navBtn}>
-        Iniciar sesión
-        <ArrowRight size={14} />
-    </button>
-</div>
+                    <span className="land-sub" style={styles.navSub}>
+                        Manager Of Restaurant Administration
+                    </span>
+                    <ThemeSwitch />
+                    <button
+                        onClick={() => navigate('/login')}
+                        style={styles.navBtn}>
+                        Iniciar sesión
+                        <ArrowRight size={14} />
+                    </button>
+                </div>
             </nav>
 
             {/* Hero */}
-            <section style={styles.hero}>
+            <section className="land-hero" style={styles.hero}>
                 <div style={styles.heroBadge}>
                     <Sparkles size={13} />
-                    Sistema de gestión con IA integrada
+                    Gestión integral para restaurantes
                 </div>
 
                 <h1 style={styles.heroTitle}>
@@ -149,8 +142,9 @@ export default function Landing() {
                 </h1>
 
                 <p style={styles.heroDesc}>
-                    MORA centraliza mesas, pedidos, caja y análisis inteligente
-                    en una plataforma moderna diseñada para restaurantes modernos.
+                    MORA centraliza mesas, pedidos, cocina, caja y analítica
+                    en una plataforma moderna, con pedidos por QR para tus
+                    clientes.
                 </p>
 
                 <div style={styles.heroBtns}>
@@ -162,19 +156,14 @@ export default function Landing() {
                     </button>
                     <button
                         onClick={() => document.getElementById('features')
-                            .scrollIntoView({ behavior: 'smooth' })}
+                            ?.scrollIntoView({ behavior: 'smooth' })}
                         style={styles.heroBtnGhost}>
                         Ver características
                     </button>
                 </div>
 
-                {/* Contadores */}
-                <div style={styles.contadores}>
-                    {[
-                        { num: `${contador.mesas}+`, label: 'Mesas gestionadas' },
-                        { num: `${contador.pedidos}+`, label: 'Pedidos procesados' },
-                        { num: `${contador.usuarios}+`, label: 'Usuarios activos' },
-                    ].map((c, i) => (
+                <div className="land-contadores" style={styles.contadores}>
+                    {datos.map((c, i) => (
                         <div key={i} style={styles.contador}>
                             <span style={styles.contadorNum}>{c.num}</span>
                             <span style={styles.contadorLabel}>{c.label}</span>
@@ -184,7 +173,10 @@ export default function Landing() {
             </section>
 
             {/* Features */}
-            <section id="features" style={styles.section}>
+            <section
+                id="features"
+                className="land-section"
+                style={styles.section}>
                 <div style={styles.sectionHeader}>
                     <h2 style={styles.sectionTitle}>
                         Todo lo que necesita tu restaurante
@@ -200,12 +192,8 @@ export default function Landing() {
                         const Icon = f.icon;
                         return (
                             <div key={i} style={styles.featureCard}>
-                                <div style={{
-                                    ...styles.featureIcon,
-                                    backgroundColor: f.color + '15',
-                                    border: `1px solid ${f.color}30`,
-                                }}>
-                                    <Icon size={20} color={f.color} />
+                                <div style={styles.featureIcon}>
+                                    <Icon size={20} color="var(--color-primary-light)" />
                                 </div>
                                 <h3 style={styles.featureTitulo}>
                                     {f.titulo}
@@ -218,9 +206,9 @@ export default function Landing() {
             </section>
 
             {/* Flujo */}
-            <section style={styles.flujoSection}>
+            <section className="land-section" style={styles.flujoSection}>
                 <h2 style={styles.sectionTitle}>¿Cómo funciona MORA?</h2>
-                <div style={styles.flujoGrid}>
+                <div className="land-flujo" style={styles.flujoGrid}>
                     {flujo.map((paso, i) => (
                         <div key={i} style={styles.flujoItem}>
                             <div style={styles.flujoPaso}>
@@ -240,7 +228,7 @@ export default function Landing() {
             </section>
 
             {/* Roles */}
-            <section style={styles.section}>
+            <section className="land-section" style={styles.section}>
                 <div style={styles.sectionHeader}>
                     <h2 style={styles.sectionTitle}>Roles del sistema</h2>
                     <p style={styles.sectionDesc}>
@@ -249,22 +237,14 @@ export default function Landing() {
                 </div>
                 <div style={styles.rolesGrid}>
                     {roles.map((r, i) => (
-                        <div key={i} style={{
-                            ...styles.rolCard,
-                            borderTop: `3px solid ${r.color}`,
-                        }}>
-                            <div style={{
-                                ...styles.rolBadge,
-                                background: r.gradient,
-                            }}>
-                                {r.rol}
-                            </div>
+                        <div key={i} style={styles.rolCard}>
+                            <div style={styles.rolBadge}>{r.rol}</div>
                             <div style={styles.rolPermisos}>
                                 {r.permisos.map((p, j) => (
                                     <div key={j} style={styles.rolPermiso}>
                                         <Check
                                             size={14}
-                                            color={r.color} />
+                                            color="var(--color-primary-light)" />
                                         <span style={styles.rolPermisoTxt}>
                                             {p}
                                         </span>
@@ -277,7 +257,7 @@ export default function Landing() {
             </section>
 
             {/* CTA */}
-            <section style={styles.cta}>
+            <section className="land-section" style={styles.cta}>
                 <div style={styles.ctaContent}>
                     <h2 style={styles.ctaTitle}>
                         ¿Listo para modernizar tu restaurante?
@@ -358,7 +338,7 @@ const styles = {
     navRight: {
         display: 'flex',
         alignItems: 'center',
-        gap: '20px',
+        gap: '16px',
     },
     navSub: {
         color: 'var(--text-muted)',
@@ -378,6 +358,7 @@ const styles = {
         fontFamily: 'var(--font-sans)',
         cursor: 'pointer',
         boxShadow: 'var(--shadow-glow)',
+        whiteSpace: 'nowrap',
     },
     hero: {
         textAlign: 'center',
@@ -392,14 +373,14 @@ const styles = {
         padding: '6px 16px',
         borderRadius: 'var(--radius-full)',
         backgroundColor: 'var(--color-primary-10)',
-        border: '1px solid var(--color-primary-10)',
+        border: '1px solid var(--border-subtle)',
         color: 'var(--color-primary-light)',
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--font-medium)',
         marginBottom: '28px',
     },
     heroTitle: {
-        fontSize: '52px',
+        fontSize: 'clamp(32px, 7vw, 52px)',
         fontWeight: 'var(--font-bold)',
         lineHeight: 1.1,
         margin: '0 0 20px 0',
@@ -504,7 +485,7 @@ const styles = {
     },
     featuresGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
         gap: '20px',
     },
     featureCard: {
@@ -521,6 +502,8 @@ const styles = {
         width: '44px',
         height: '44px',
         borderRadius: 'var(--radius-md)',
+        backgroundColor: 'var(--color-primary-10)',
+        border: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -550,7 +533,6 @@ const styles = {
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '8px',
-        marginTop: '48px',
         maxWidth: '900px',
         margin: '48px auto 0',
     },
@@ -595,7 +577,7 @@ const styles = {
     },
     rolesGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))',
         gap: '20px',
     },
     rolCard: {
@@ -603,6 +585,7 @@ const styles = {
         backgroundColor: 'var(--bg-surface)',
         borderRadius: 'var(--radius-lg)',
         border: '1px solid var(--border-subtle)',
+        borderTop: '3px solid var(--color-primary)',
         display: 'flex',
         flexDirection: 'column',
         gap: '20px',
@@ -611,6 +594,7 @@ const styles = {
         display: 'inline-flex',
         padding: '6px 16px',
         borderRadius: 'var(--radius-full)',
+        background: 'var(--gradient-primary)',
         color: 'white',
         fontSize: 'var(--text-sm)',
         fontWeight: 'var(--font-bold)',
@@ -687,12 +671,13 @@ const styles = {
         left: '-40px',
     },
     footer: {
-        padding: '40px 60px',
+        padding: '40px 24px',
         borderTop: '1px solid var(--border-subtle)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: '8px',
+        textAlign: 'center',
     },
     footerLogo: {
         display: 'flex',

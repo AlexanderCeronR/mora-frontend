@@ -1,27 +1,30 @@
 import { useLocation } from 'react-router-dom';
 
 const titulos = {
-    '/dashboard': { titulo: 'Dashboard', sub: 'Métricas y análisis' },
-    '/mesas':     { titulo: 'Mesas', sub: 'Estado del salón' },
-    '/menu':      { titulo: 'Menú', sub: 'Productos y categorías' },
-    '/pedidos':   { titulo: 'Pedidos', sub: 'Gestión de órdenes' },
-    '/caja':      { titulo: 'Caja', sub: 'Pagos y facturación' },
-    '/usuarios':  { titulo: 'Usuarios', sub: 'Gestión del equipo' },
+    '/dashboard':  { titulo: 'Dashboard',  sub: 'Métricas y análisis' },
+    '/mesas':      { titulo: 'Mesas',      sub: 'Estado del salón' },
+    '/menu':       { titulo: 'Menú',       sub: 'Productos y categorías' },
+    '/pedidos':    { titulo: 'Pedidos',    sub: 'Gestión de órdenes' },
+    '/caja':       { titulo: 'Caja',       sub: 'Pagos y facturación' },
+    '/usuarios':   { titulo: 'Usuarios',   sub: 'Gestión del equipo' },
+    '/supervisor': { titulo: 'Supervisor', sub: 'Asignación y actividad' },
+    '/cocina':     { titulo: 'Cocina',     sub: 'Cola de preparación' },
 };
 
-export default function Header() {
+export default function Header({ menuBtn }) {
     const location = useLocation();
     const info = titulos[location.pathname] || { titulo: 'MORA', sub: '' };
 
     return (
         <header style={styles.header}>
-            <div>
-                <h1 style={styles.titulo}>{info.titulo}</h1>
-                {info.sub && (
-                    <p style={styles.sub}>{info.sub}</p>
-                )}
+            <div style={styles.left}>
+                {menuBtn}
+                <div>
+                    <h1 style={styles.titulo}>{info.titulo}</h1>
+                    {info.sub && <p style={styles.sub}>{info.sub}</p>}
+                </div>
             </div>
-            <div style={styles.right}>
+            <div className="hide-mobile" style={styles.right}>
                 <div style={styles.pill}>
                     <div style={styles.dot} />
                     Sistema activo
@@ -37,12 +40,17 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '0 var(--space-6)',
+        padding: '0 var(--space-4)',
         borderBottom: '1px solid var(--border-subtle)',
         backgroundColor: 'var(--bg-surface)',
         position: 'sticky',
         top: 0,
         zIndex: 10,
+    },
+    left: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
     },
     titulo: {
         fontSize: 'var(--text-xl)',

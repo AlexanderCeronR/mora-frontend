@@ -7,15 +7,18 @@ import Modal from '../components/ui/Modal';
 import { showToast } from '../components/ui/Toast';
 import {
     CreditCard, Banknote, Smartphone,
-    TrendingUp, Receipt, CheckCircle, Download
+    TrendingUp, Receipt, CheckCircle, Download, User
 } from 'lucide-react';
 import PageTransition from '../components/ui/PageTransition';
 
 const metodoConfig = {
-    EFECTIVO:      { icon: Banknote,    label: 'Efectivo',      color: 'var(--color-success)' },
-    TARJETA:       { icon: CreditCard,  label: 'Tarjeta',       color: 'var(--color-primary-light)' },
-    TRANSFERENCIA: { icon: Smartphone,  label: 'Transferencia', color: 'var(--color-accent-light)' },
+    EFECTIVO:      { icon: Banknote,   label: 'Efectivo',      color: 'var(--color-success)' },
+    TARJETA:       { icon: CreditCard, label: 'Tarjeta',       color: 'var(--color-primary-light)' },
+    TRANSFERENCIA: { icon: Smartphone, label: 'Transferencia', color: 'var(--color-accent-light)' },
 };
+
+const tenue = (color, pct = 15) =>
+    `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 
 export default function Caja() {
     const [pedidos, setPedidos] = useState([]);
@@ -43,6 +46,11 @@ export default function Caja() {
         }
     };
 
+    const cerrarModal = () => {
+        setModalPago(null);
+        setMetodoPago('EFECTIVO');
+    };
+
     const registrarPago = async () => {
         if (!modalPago) return;
         setPagandoId(modalPago.id);
@@ -52,8 +60,7 @@ export default function Caja() {
                 metodoPago,
             });
             showToast('Pago registrado correctamente', 'success');
-            setModalPago(null);
-            setMetodoPago('EFECTIVO');
+            cerrarModal();
             cargarDatos();
         } catch {
             showToast('Error al registrar el pago', 'error');
@@ -85,22 +92,21 @@ export default function Caja() {
         }
     };
 
+    const hoy = new Date().toDateString();
     const totalHoy = pagos
-        .filter(p => {
-            const fecha = new Date(p.fechaPago);
-            const hoy = new Date();
-            return fecha.toDateString() === hoy.toDateString();
-        })
-        .reduce((sum, p) => sum + p.total, 0);
+        .filter(p => new Date(p.fechaPago).toDateString() === hoy)
+        .reduce((sum, p) => sum + (p.total || 0), 0);
 
-    const totalGeneral = pagos.reduce((sum, p) => sum + p.total, 0);
+    const totalGeneral = pagos.reduce((sum, p) => sum + (p.total || 0), 0);
 
     const pagosPorMetodo = Object.entries(
         pagos.reduce((acc, p) => {
-            acc[p.metodoPago] = (acc[p.metodoPago] || 0) + p.total;
+            acc[p.metodoPago] = (acc[p.metodoPago] || 0) + (p.total || 0);
             return acc;
         }, {})
     );
+
+    const historial = [...pagos].reverse();
 
     if (loading) return (
         <div style={styles.loading}>
@@ -113,7 +119,7 @@ export default function Caja() {
             <div style={styles.container}>
 
                 {/* KPIs */}
-                <div style={styles.kpiGrid}>
+                <div className="grid-2" style={styles.kpiGrid}>
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
@@ -145,7 +151,7 @@ export default function Caja() {
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
-                            background: 'linear-gradient(135deg, #C13383, #E05454)'
+                            background: 'var(--gradient-danger)'
                         }}>
                             <CheckCircle size={18} color="white" />
                         </div>
@@ -157,7 +163,7 @@ export default function Caja() {
                     <Card style={styles.kpiCard}>
                         <div style={{
                             ...styles.kpiIcon,
-                            background: 'linear-gradient(135deg, #E05454, #f59e0b)'
+                            background: 'var(--gradient-danger)'
                         }}>
                             <CreditCard size={18} color="white" />
                         </div>
@@ -212,13 +218,13 @@ export default function Caja() {
                                 ...(vista === t ? styles.tabActive : {})
                             }}>
                             {t === 'COBRAR'
-                                ? `Por Cobrar (${pedidos.length})`
+                                ? `Por cobrar (${pedidos.length})`
                                 : `Historial (${pagos.length})`}
                         </button>
                     ))}
                 </div>
 
-                {/* Vista Por Cobrar */}
+                {/* Por cobrar */}
                 {vista === 'COBRAR' && (
                     <div style={styles.grid}>
                         {pedidos.length === 0 ? (
@@ -247,7 +253,8 @@ export default function Caja() {
                                     </div>
 
                                     <p style={styles.meseroNombre}>
-                                        👤 {pedido.meseroNombre}
+                                        <User size={13} />
+                                        {pedido.meseroNombre}
                                     </p>
 
                                     <div style={styles.detalles}>
@@ -286,36 +293,34 @@ export default function Caja() {
                     </div>
                 )}
 
-                {/* Vista Historial */}
+                {/* Historial */}
                 {vista === 'HISTORIAL' && (
                     <div style={styles.historial}>
-                        {pagos.length === 0 ? (
+                        {historial.length === 0 ? (
                             <div style={styles.vacio}>
                                 <p style={{ color: 'var(--text-muted)' }}>
                                     No hay pagos registrados
                                 </p>
                             </div>
                         ) : (
-                            [...pagos].reverse().map(pago => {
+                            historial.map(pago => {
                                 const cfg = metodoConfig[pago.metodoPago] || {};
                                 const Icon = cfg.icon || CreditCard;
+                                const color = cfg.color || 'var(--text-muted)';
                                 return (
                                     <Card key={pago.id}
+                                        className="stack-mobile"
                                         style={styles.pagoItem}>
                                         <div style={styles.pagoLeft}>
                                             <div style={{
                                                 ...styles.pagoIconWrap,
-                                                backgroundColor:
-                                                    (cfg.color || '#888') + '15',
+                                                backgroundColor: tenue(color),
                                             }}>
-                                                <Icon
-                                                    size={16}
-                                                    color={cfg.color || '#888'} />
+                                                <Icon size={16} color={color} />
                                             </div>
-                                            <div>
+                                            <div style={{ minWidth: 0 }}>
                                                 <p style={styles.pagoId}>
-                                                    Pago #{pago.id} —
-                                                    Pedido #{pago.pedidoId}
+                                                    Pago #{pago.id} · Pedido #{pago.pedidoId}
                                                 </p>
                                                 <p style={styles.pagoMeta}>
                                                     Mesa {pago.mesaNumero} ·{' '}
@@ -340,8 +345,7 @@ export default function Caja() {
                                             </Badge>
                                             <span style={{
                                                 ...styles.pagoTotal,
-                                                color: cfg.color ||
-                                                    'var(--color-success)'
+                                                color
                                             }}>
                                                 ${pago.total?.toLocaleString()}
                                             </span>
@@ -365,19 +369,11 @@ export default function Caja() {
                 {/* Modal pago */}
                 {modalPago && (
                     <Modal
-                        title={`Cobrar Pedido #${modalPago.id}`}
-                        onClose={() => {
-                            setModalPago(null);
-                            setMetodoPago('EFECTIVO');
-                        }}
+                        title={`Cobrar pedido #${modalPago.id}`}
+                        onClose={cerrarModal}
                         footer={
                             <>
-                                <Button
-                                    variant="ghost"
-                                    onClick={() => {
-                                        setModalPago(null);
-                                        setMetodoPago('EFECTIVO');
-                                    }}>
+                                <Button variant="ghost" onClick={cerrarModal}>
                                     Cancelar
                                 </Button>
                                 <Button
@@ -387,7 +383,7 @@ export default function Caja() {
                                     <CheckCircle size={15} />
                                     {pagandoId === modalPago.id
                                         ? 'Procesando...'
-                                        : 'Confirmar Pago'}
+                                        : 'Confirmar pago'}
                                 </Button>
                             </>
                         }>
@@ -424,7 +420,7 @@ export default function Caja() {
                                                     ? cfg.color
                                                     : 'var(--border-default)',
                                                 backgroundColor: activo
-                                                    ? cfg.color + '15'
+                                                    ? tenue(cfg.color)
                                                     : 'var(--bg-elevated)',
                                                 color: activo
                                                     ? cfg.color
@@ -432,7 +428,7 @@ export default function Caja() {
                                             }}>
                                             <Icon size={20} />
                                             <span style={{
-                                                fontSize: 'var(--text-sm)',
+                                                fontSize: 'var(--text-xs)',
                                                 fontWeight: activo
                                                     ? 'var(--font-semibold)'
                                                     : 'var(--font-regular)'
@@ -473,7 +469,8 @@ const styles = {
     },
     kpiGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+        gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 200px), 1fr))',
         gap: 'var(--space-4)',
     },
     kpiCard: {
@@ -493,7 +490,7 @@ const styles = {
     kpiValor: {
         fontSize: 'var(--text-2xl)',
         fontWeight: 'var(--font-bold)',
-        color: 'var(--color-success)',
+        color: 'var(--text-primary)',
         margin: 0,
         lineHeight: 1.1,
     },
@@ -530,29 +527,32 @@ const styles = {
     tabs: {
         display: 'flex',
         borderBottom: '1px solid var(--border-subtle)',
+        overflowX: 'auto',
     },
     tab: {
-    padding: '10px 20px',
-    border: 'none',
-    backgroundColor: 'transparent',
-    color: 'var(--text-muted)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: 'var(--font-medium)',
-    fontFamily: 'var(--font-sans)',
-    cursor: 'pointer',
-    borderBottomWidth: '2px',
-    borderBottomStyle: 'solid',
-    borderBottomColor: 'transparent',
-    marginBottom: '-1px',
-    transition: 'all var(--transition-fast)',
-},
-tabActive: {
-    color: 'var(--color-primary-light)',
-    borderBottomColor: 'var(--color-primary)',
-},
+        padding: '10px 20px',
+        border: 'none',
+        backgroundColor: 'transparent',
+        color: 'var(--text-muted)',
+        fontSize: 'var(--text-sm)',
+        fontWeight: 'var(--font-medium)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        borderBottomWidth: '2px',
+        borderBottomStyle: 'solid',
+        borderBottomColor: 'transparent',
+        marginBottom: '-1px',
+        transition: 'all var(--transition-fast)',
+    },
+    tabActive: {
+        color: 'var(--color-primary-light)',
+        borderBottomColor: 'var(--color-primary)',
+    },
     grid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gridTemplateColumns:
+            'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
         gap: 'var(--space-4)',
     },
     pedidoCard: {
@@ -564,6 +564,7 @@ tabActive: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 'var(--space-2)',
     },
     pedidoId: {
         fontSize: 'var(--text-base)',
@@ -571,6 +572,9 @@ tabActive: {
         color: 'var(--text-primary)',
     },
     meseroNombre: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)',
         margin: 0,
@@ -585,6 +589,7 @@ tabActive: {
     detalleRow: {
         display: 'flex',
         justifyContent: 'space-between',
+        gap: 'var(--space-2)',
     },
     detalleNombre: {
         fontSize: 'var(--text-sm)',
@@ -593,6 +598,7 @@ tabActive: {
     detalleValor: {
         fontSize: 'var(--text-sm)',
         color: 'var(--text-muted)',
+        flexShrink: 0,
     },
     totalRow: {
         display: 'flex',
@@ -622,12 +628,14 @@ tabActive: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 'var(--space-3)',
         padding: 'var(--space-4)',
     },
     pagoLeft: {
         display: 'flex',
         alignItems: 'center',
         gap: 'var(--space-3)',
+        minWidth: 0,
     },
     pagoIconWrap: {
         width: '36px',
@@ -676,6 +684,7 @@ tabActive: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 'var(--space-3)',
         padding: 'var(--space-4)',
         backgroundColor: 'var(--bg-elevated)',
         borderRadius: 'var(--radius-md)',
@@ -710,14 +719,14 @@ tabActive: {
     metodosGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 'var(--space-3)',
+        gap: 'var(--space-2)',
     },
     metodoBtn: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 'var(--space-2)',
-        padding: 'var(--space-4)',
+        padding: 'var(--space-3)',
         borderRadius: 'var(--radius-md)',
         border: '1px solid',
         cursor: 'pointer',
@@ -730,7 +739,7 @@ tabActive: {
         gap: '4px',
         padding: '4px 10px',
         borderRadius: 'var(--radius-sm)',
-        border: '1px solid var(--color-primary)30',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
         color: 'var(--color-primary-light)',
         fontSize: 'var(--text-xs)',

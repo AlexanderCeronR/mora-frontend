@@ -402,3 +402,40 @@ body {
         transform: scale(1);
     }
 }
+/* =====================
+   RESPONSIVE
+   ===================== */
+html, body { overflow-x: hidden; }
+
+@media (max-width: 768px) {
+  .hide-mobile { display: none !important; }
+
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+
+  .stack-mobile {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .full-mobile { width: 100% !important; max-width: 100% !important; }
+
+  /* Evita el zoom automático de iOS al enfocar un campo */
+  input, select, textarea { font-size: 16px !important; }
+
+  /* Login */
+  .login-left { display: none !important; }
+  .login-right {
+    width: 100% !important;
+    padding: 72px 24px 32px !important;
+  }
+
+  /* Landing */
+  .land-nav { padding: 14px 16px !important; }
+  .land-sub { display: none !important; }
+  .land-hero { padding: 56px 20px 48px !important; }
+  .land-hero h1 { font-size: 34px !important; }
+  .land-section { padding: 48px 20px !important; }
+  .land-contadores { gap: 24px !important; padding: 24px !important; }
+  .land-flujo { flex-direction: column !important; }
+  .land-flujo svg { display: none !important; }
+}

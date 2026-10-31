@@ -7,7 +7,9 @@ import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import Select from '../components/ui/Select';
 import { showToast } from '../components/ui/Toast';
-import { Plus, ShoppingBag, Clock, ChevronRight } from 'lucide-react';
+import {
+    Plus, ShoppingBag, Clock, ChevronRight, Search, ArrowUpDown
+} from 'lucide-react';
 import Confirm from '../components/ui/Confirm';
 import useConfirm from '../hooks/useConfirm';
 import PageTransition from '../components/ui/PageTransition';
@@ -21,6 +23,7 @@ const estadoConfig = {
 };
 
 const NOTIF_KEY = 'mora_notif_listos';
+const PAGINA = 30;
 
 const leerNotificados = () => {
     try {
@@ -36,6 +39,9 @@ export default function Pedidos() {
     const [productos, setProductos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filtro, setFiltro] = useState('TODOS');
+    const [busqueda, setBusqueda] = useState('');
+    const [orden, setOrden] = useState('RECIENTES'); // RECIENTES | ANTIGUOS
+    const [visibles, setVisibles] = useState(PAGINA);
     const [modalCrear, setModalCrear] = useState(false);
     const { confirm, config } = useConfirm();
     const [nuevoPedido, setNuevoPedido] = useState({
@@ -56,6 +62,9 @@ export default function Pedidos() {
         .includes(usuario?.rol);
 
     useEffect(() => { cargarDatos(); }, []);
+
+    // Reinicia la paginación al cambiar filtros
+    useEffect(() => { setVisibles(PAGINA); }, [filtro, busqueda, orden]);
 
     // Avisa cuando un pedido propio pasa a LISTO
     useEffect(() => {
@@ -192,9 +201,16 @@ export default function Pedidos() {
         }
     };
 
-    const pedidosFiltrados = filtro === 'TODOS'
-        ? pedidos
-        : pedidos.filter(p => p.estado === filtro);
+    // Filtro por estado + búsqueda por número + orden
+    const pedidosFiltrados = pedidos
+        .filter(p => filtro === 'TODOS' || p.estado === filtro)
+        .filter(p => {
+            const q = busqueda.trim().replace('#', '');
+            return q === '' || String(p.id).includes(q);
+        })
+        .sort((a, b) => orden === 'RECIENTES' ? b.id - a.id : a.id - b.id);
+
+    const pedidosMostrados = pedidosFiltrados.slice(0, visibles);
 
     const conteo = (estado) =>
         pedidos.filter(p => p.estado === estado).length;
@@ -217,7 +233,7 @@ export default function Pedidos() {
         <PageTransition>
             <div style={styles.container}>
 
-                {/* Top bar */}
+                {/* Filtros de estado + botón */}
                 <div className="stack-mobile" style={styles.topBar}>
                     <div style={styles.filtros}>
                         {estados.map(e => (
@@ -256,10 +272,48 @@ export default function Pedidos() {
                     )}
                 </div>
 
+                {/* Búsqueda y orden */}
+                <div className="stack-mobile" style={styles.herramientas}>
+                    <div className="full-mobile" style={styles.searchWrap}>
+                        <Search
+                            size={15}
+                            color="var(--text-muted)"
+                            style={styles.searchIcon} />
+                        <input
+                            value={busqueda}
+                            onChange={e => setBusqueda(e.target.value)}
+                            inputMode="numeric"
+                            placeholder="Buscar pedido por número..."
+                            style={styles.searchInput}
+                        />
+                    </div>
+
+                    <div style={styles.ordenWrap}>
+                        <ArrowUpDown size={14} color="var(--text-muted)" />
+                        <select
+                            value={orden}
+                            onChange={e => setOrden(e.target.value)}
+                            style={styles.ordenSelect}>
+                            <option value="RECIENTES">
+                                Más recientes primero
+                            </option>
+                            <option value="ANTIGUOS">
+                                Más antiguos primero
+                            </option>
+                        </select>
+                    </div>
+
+                    <span style={styles.resultados}>
+                        {pedidosFiltrados.length} pedido
+                        {pedidosFiltrados.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+
                 {/* Grid de pedidos */}
                 <div style={styles.grid}>
-                    {pedidosFiltrados.map(pedido => {
-                        const cfg = estadoConfig[pedido.estado];
+                    {pedidosMostrados.map(pedido => {
+                        const cfg = estadoConfig[pedido.estado]
+                            || estadoConfig.PENDIENTE;
                         return (
                             <Card key={pedido.id} style={styles.pedidoCard}>
 
@@ -362,6 +416,7 @@ export default function Pedidos() {
                                 marginTop: '12px'
                             }}>
                                 No hay pedidos
+                                {busqueda ? ` con el número "${busqueda}"` : ''}
                                 {filtro !== 'TODOS'
                                     ? ` en estado ${filtro.replace('_', ' ')}`
                                     : ''}
@@ -369,6 +424,15 @@ export default function Pedidos() {
                         </div>
                     )}
                 </div>
+
+                {/* Cargar más */}
+                {pedidosFiltrados.length > visibles && (
+                    <button
+                        onClick={() => setVisibles(v => v + PAGINA)}
+                        style={styles.masBtn}>
+                        Cargar más ({pedidosFiltrados.length - visibles} restantes)
+                    </button>
+                )}
 
                 {/* Modal crear pedido */}
                 {modalCrear && (
@@ -548,6 +612,69 @@ const styles = {
         borderRadius: 'var(--radius-full)',
         fontSize: 'var(--text-xs)',
         fontWeight: 'var(--font-semibold)',
+    },
+    herramientas: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-3)',
+        flexWrap: 'wrap',
+    },
+    searchWrap: {
+        position: 'relative',
+        flex: '1 1 220px',
+        maxWidth: '320px',
+    },
+    searchIcon: {
+        position: 'absolute',
+        left: '12px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        pointerEvents: 'none',
+    },
+    searchInput: {
+        width: '100%',
+        padding: '9px 14px 9px 36px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-elevated)',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+    },
+    ordenWrap: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '0 12px',
+        borderRadius: 'var(--radius-md)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-elevated)',
+    },
+    ordenSelect: {
+        padding: '9px 0',
+        border: 'none',
+        background: 'transparent',
+        color: 'var(--text-primary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
+        outline: 'none',
+        cursor: 'pointer',
+    },
+    resultados: {
+        fontSize: 'var(--text-xs)',
+        color: 'var(--text-muted)',
+    },
+    masBtn: {
+        alignSelf: 'center',
+        padding: '10px 24px',
+        borderRadius: 'var(--radius-full)',
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'transparent',
+        color: 'var(--text-secondary)',
+        fontSize: 'var(--text-sm)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
     },
     grid: {
         display: 'grid',

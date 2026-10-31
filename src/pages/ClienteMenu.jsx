@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { showToast } from '../components/ui/Toast';
+import ThemeSwitch from '../components/ui/ThemeSwitch';
+import { useTheme } from '../context/ThemeContext';
 import {
     ShoppingBag, Plus, Minus, CheckCircle, Clock,
     UtensilsCrossed, Salad, GlassWater, CakeSlice, Utensils,
@@ -27,6 +29,8 @@ const estadoConfig = {
 
 export default function ClienteMenu() {
     const { mesaId } = useParams();
+    const { theme } = useTheme();
+    const claro = theme === 'light';
     const [productos, setProductos] = useState([]);
     const [carrito, setCarrito] = useState({});
     const [filtro, setFiltro] = useState('TODOS');
@@ -143,15 +147,15 @@ export default function ClienteMenu() {
         filtro === 'TODOS' || p.categoria === filtro
     );
 
-    const renderIcono = (categoria, size, color) => {
+    const renderIcono = (categoria, size) => {
         const Icon = categoriaIcon[categoria] || Utensils;
-        return <Icon size={size} color={color} />;
+        return <Icon size={size} color="var(--color-secondary)" />;
     };
 
     if (loading) return (
         <div style={styles.loading}>
             <div style={styles.spinner} />
-            <p style={{ color: '#94a3b8', marginTop: '16px' }}>
+            <p style={{ color: 'var(--text-muted)', marginTop: '16px' }}>
                 Cargando menú...
             </p>
         </div>
@@ -169,27 +173,30 @@ export default function ClienteMenu() {
                         <p style={styles.mesaText}>Mesa {mesaId}</p>
                     </div>
                 </div>
-                {vista === 'MENU' && itemsCarrito > 0 && (
-                    <button
-                        onClick={() => setVista('CONFIRMACION')}
-                        style={styles.carritoBtn}>
-                        <ShoppingBag size={16} />
-                        Ver pedido
-                        <span style={styles.carritoBadge}>
-                            {itemsCarrito}
-                        </span>
-                    </button>
-                )}
-                {vista === 'ESTADO' && (
-                    <button
-                        onClick={() => {
-                            setVista('MENU');
-                            setCarrito({});
-                        }}
-                        style={styles.nuevoBtn}>
-                        Nuevo pedido
-                    </button>
-                )}
+                <div style={styles.headerRight}>
+                    <ThemeSwitch />
+                    {vista === 'MENU' && itemsCarrito > 0 && (
+                        <button
+                            onClick={() => setVista('CONFIRMACION')}
+                            style={styles.carritoBtn}>
+                            <ShoppingBag size={16} />
+                            Ver pedido
+                            <span style={styles.carritoBadge}>
+                                {itemsCarrito}
+                            </span>
+                        </button>
+                    )}
+                    {vista === 'ESTADO' && (
+                        <button
+                            onClick={() => {
+                                setVista('MENU');
+                                setCarrito({});
+                            }}
+                            style={styles.nuevoBtn}>
+                            Nuevo pedido
+                        </button>
+                    )}
+                </div>
             </div>
 
             {/* Vista MENU */}
@@ -232,11 +239,7 @@ export default function ClienteMenu() {
                                             />
                                         ) : (
                                             <div style={styles.iconoPlaceholder}>
-                                                {renderIcono(
-                                                    producto.categoria,
-                                                    26,
-                                                    '#792CA2'
-                                                )}
+                                                {renderIcono(producto.categoria, 26)}
                                             </div>
                                         )}
                                     </div>
@@ -324,7 +327,7 @@ export default function ClienteMenu() {
                                                 style={styles.resumenImagen}
                                             />
                                         ) : (
-                                            renderIcono(p.categoria, 20, '#792CA2')
+                                            renderIcono(p.categoria, 20)
                                         )}
                                     </div>
                                     <div>
@@ -397,7 +400,7 @@ export default function ClienteMenu() {
                             return (
                                 <div style={{
                                     ...styles.estadoIconWrap,
-                                    background: cfg.gradient
+                                    background: claro ? '#000000' : cfg.gradient
                                 }}>
                                     <EstadoIcon size={40} color="white" />
                                 </div>
@@ -444,10 +447,11 @@ export default function ClienteMenu() {
                                             <div style={{
                                                 ...styles.progresoDot,
                                                 backgroundColor: activo
-                                                    ? '#443199' : '#222233',
+                                                    ? 'var(--color-primary)'
+                                                    : 'var(--bg-overlay)',
                                                 border: activo
-                                                    ? '2px solid #443199'
-                                                    : '2px solid #2a2a3d',
+                                                    ? '2px solid var(--color-primary)'
+                                                    : '2px solid var(--border-default)',
                                             }}>
                                                 {activo &&
                                                     <CheckCircle size={14} color="white" />}
@@ -455,7 +459,8 @@ export default function ClienteMenu() {
                                             <p style={{
                                                 ...styles.progresoLabel,
                                                 color: activo
-                                                    ? '#f0f0ff' : '#606080',
+                                                    ? 'var(--text-primary)'
+                                                    : 'var(--text-muted)',
                                             }}>
                                                 {estadoConfig[e]?.label}
                                             </p>
@@ -463,7 +468,8 @@ export default function ClienteMenu() {
                                                 <div style={{
                                                     ...styles.progresoLinea,
                                                     backgroundColor: i < indiceActual
-                                                        ? '#443199' : '#2a2a3d',
+                                                        ? 'var(--color-primary)'
+                                                        : 'var(--border-default)',
                                                 }} />
                                             )}
                                         </div>
@@ -486,14 +492,17 @@ export default function ClienteMenu() {
                             ))}
                             <div style={styles.pedidoResumenTotal}>
                                 <span>Total</span>
-                                <span style={{ color: '#C13383', fontWeight: 'bold' }}>
+                                <span style={{
+                                    color: 'var(--cliente-price)',
+                                    fontWeight: 'bold'
+                                }}>
                                     ${estadoPedido?.total?.toLocaleString()}
                                 </span>
                             </div>
                         </div>
 
                         <div style={styles.pollingInfo}>
-                            <Clock size={12} color="#64748b" />
+                            <Clock size={12} color="var(--text-muted)" />
                             <span style={styles.pollingTxt}>
                                 Actualiza automáticamente cada 20 segundos
                             </span>
@@ -508,9 +517,9 @@ export default function ClienteMenu() {
 const styles = {
     page: {
         minHeight: '100vh',
-        backgroundColor: '#09090f',
+        backgroundColor: 'var(--bg-base)',
         fontFamily: "'Inter', sans-serif",
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
     },
     loading: {
         display: 'flex',
@@ -518,13 +527,13 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        backgroundColor: '#09090f',
+        backgroundColor: 'var(--bg-base)',
     },
     spinner: {
         width: '36px',
         height: '36px',
-        border: '3px solid #1a1a26',
-        borderTop: '3px solid #443199',
+        border: '3px solid var(--cliente-chip)',
+        borderTop: '3px solid var(--color-primary)',
         borderRadius: '50%',
         animation: 'spin 0.8s linear infinite',
     },
@@ -533,8 +542,8 @@ const styles = {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '16px 20px',
-        backgroundColor: '#111118',
-        borderBottom: '1px solid #1e1e2e',
+        backgroundColor: 'var(--cliente-card)',
+        borderBottom: '1px solid var(--border-subtle)',
         position: 'sticky',
         top: 0,
         zIndex: 10,
@@ -544,11 +553,16 @@ const styles = {
         alignItems: 'center',
         gap: '10px',
     },
+    headerRight: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+    },
     logoIcon: {
         width: '34px',
         height: '34px',
         borderRadius: '8px',
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -557,7 +571,7 @@ const styles = {
         fontSize: '16px',
     },
     logoText: {
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         fontWeight: 'bold',
         fontSize: '16px',
         letterSpacing: '2px',
@@ -565,7 +579,7 @@ const styles = {
         lineHeight: 1.2,
     },
     mesaText: {
-        color: '#606080',
+        color: 'var(--text-muted)',
         fontSize: '12px',
         margin: 0,
     },
@@ -576,7 +590,7 @@ const styles = {
         padding: '8px 16px',
         borderRadius: '8px',
         border: 'none',
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         fontSize: '13px',
         fontWeight: '600',
@@ -584,7 +598,8 @@ const styles = {
         cursor: 'pointer',
     },
     carritoBadge: {
-        backgroundColor: '#C13383',
+        backgroundColor: 'var(--cliente-price)',
+        color: 'var(--cliente-onbrand)',
         borderRadius: '50%',
         width: '18px',
         height: '18px',
@@ -597,9 +612,9 @@ const styles = {
     nuevoBtn: {
         padding: '8px 16px',
         borderRadius: '8px',
-        border: '1px solid #2a2a3d',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
         fontSize: '13px',
         fontFamily: 'Inter, sans-serif',
         cursor: 'pointer',
@@ -624,9 +639,9 @@ const styles = {
         gap: '6px',
         padding: '7px 14px',
         borderRadius: '20px',
-        border: '1px solid #2a2a3d',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
         fontSize: '13px',
         fontFamily: 'Inter, sans-serif',
         cursor: 'pointer',
@@ -634,7 +649,7 @@ const styles = {
         flexShrink: 0,
     },
     tabActive: {
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         borderColor: 'transparent',
     },
@@ -648,9 +663,9 @@ const styles = {
         alignItems: 'center',
         gap: '12px',
         padding: '14px',
-        backgroundColor: '#111118',
+        backgroundColor: 'var(--cliente-card)',
         borderRadius: '12px',
-        border: '1px solid #1e1e2e',
+        border: '1px solid var(--border-subtle)',
     },
     productoMedia: {
         flexShrink: 0,
@@ -666,8 +681,8 @@ const styles = {
         width: '64px',
         height: '64px',
         borderRadius: '10px',
-        backgroundColor: '#1a1a26',
-        border: '1px solid #1e1e2e',
+        backgroundColor: 'var(--cliente-chip)',
+        border: '1px solid var(--border-subtle)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -678,19 +693,19 @@ const styles = {
     productoNombre: {
         fontSize: '15px',
         fontWeight: '600',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: '0 0 2px 0',
     },
     productoDesc: {
         fontSize: '12px',
-        color: '#606080',
+        color: 'var(--text-muted)',
         margin: '0 0 4px 0',
         lineHeight: 1.4,
     },
     productoPrecio: {
         fontSize: '15px',
         fontWeight: '700',
-        color: '#C13383',
+        color: 'var(--cliente-price)',
         margin: 0,
     },
     productoAccion: {
@@ -703,7 +718,7 @@ const styles = {
         padding: '7px 12px',
         borderRadius: '8px',
         border: 'none',
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         fontSize: '13px',
         fontWeight: '600',
@@ -714,7 +729,7 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        backgroundColor: '#1a1a26',
+        backgroundColor: 'var(--cliente-chip)',
         borderRadius: '8px',
         padding: '4px',
     },
@@ -723,7 +738,7 @@ const styles = {
         height: '28px',
         borderRadius: '6px',
         border: 'none',
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         display: 'flex',
         alignItems: 'center',
@@ -733,7 +748,7 @@ const styles = {
     cantidadNum: {
         fontSize: '15px',
         fontWeight: '700',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         minWidth: '20px',
         textAlign: 'center',
     },
@@ -744,32 +759,32 @@ const styles = {
         transform: 'translateX(-50%)',
         width: 'calc(100% - 40px)',
         maxWidth: '560px',
-        backgroundColor: '#1a1a26',
-        border: '1px solid #2a2a3d',
+        backgroundColor: 'var(--cliente-card)',
+        border: '1px solid var(--border-default)',
         borderRadius: '14px',
         padding: '14px 20px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
         zIndex: 50,
     },
     carritoItems: {
         fontSize: '13px',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
         margin: 0,
     },
     carritoTotal: {
         fontSize: '18px',
         fontWeight: '700',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: 0,
     },
     carritoConfirmarBtn: {
         padding: '10px 20px',
         borderRadius: '10px',
         border: 'none',
-        background: 'linear-gradient(135deg, #443199, #792CA2)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         fontSize: '14px',
         fontWeight: '600',
@@ -779,7 +794,7 @@ const styles = {
     seccionTitulo: {
         fontSize: '20px',
         fontWeight: '700',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: '0 0 20px 0',
     },
     resumenList: {
@@ -793,9 +808,9 @@ const styles = {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '14px',
-        backgroundColor: '#111118',
+        backgroundColor: 'var(--cliente-card)',
         borderRadius: '12px',
-        border: '1px solid #1e1e2e',
+        border: '1px solid var(--border-subtle)',
         gap: '12px',
     },
     resumenLeft: {
@@ -808,7 +823,7 @@ const styles = {
         width: '44px',
         height: '44px',
         borderRadius: '8px',
-        backgroundColor: '#1a1a26',
+        backgroundColor: 'var(--cliente-chip)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -823,12 +838,12 @@ const styles = {
     resumenNombre: {
         fontSize: '14px',
         fontWeight: '600',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: 0,
     },
     resumenPrecio: {
         fontSize: '12px',
-        color: '#606080',
+        color: 'var(--text-muted)',
         margin: '2px 0 0 0',
     },
     resumenRight: {
@@ -840,7 +855,7 @@ const styles = {
     resumenSubtotal: {
         fontSize: '14px',
         fontWeight: '700',
-        color: '#C13383',
+        color: 'var(--cliente-price)',
         margin: 0,
     },
     totalWrap: {
@@ -848,19 +863,19 @@ const styles = {
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '16px',
-        backgroundColor: '#111118',
+        backgroundColor: 'var(--cliente-card)',
         borderRadius: '12px',
-        border: '1px solid #2a2a3d',
+        border: '1px solid var(--border-default)',
         marginBottom: '20px',
     },
     totalLabel: {
         fontSize: '16px',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
     },
     totalValor: {
         fontSize: '24px',
         fontWeight: '700',
-        color: '#C13383',
+        color: 'var(--cliente-price)',
     },
     confirmBtns: {
         display: 'flex',
@@ -870,9 +885,9 @@ const styles = {
     volverBtn: {
         padding: '12px',
         borderRadius: '10px',
-        border: '1px solid #2a2a3d',
+        border: '1px solid var(--border-default)',
         backgroundColor: 'transparent',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
         fontSize: '14px',
         fontFamily: 'Inter, sans-serif',
         cursor: 'pointer',
@@ -881,7 +896,7 @@ const styles = {
         padding: '14px',
         borderRadius: '10px',
         border: 'none',
-        background: 'linear-gradient(135deg, #443199, #792CA2, #C13383)',
+        background: 'var(--cliente-brand)',
         color: 'white',
         fontSize: '15px',
         fontWeight: '700',
@@ -903,31 +918,31 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 8px 32px rgba(68,49,153,0.35)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
     },
     estadoTitulo: {
         fontSize: '24px',
         fontWeight: '700',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: 0,
     },
     estadoDesc: {
         fontSize: '14px',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
         lineHeight: 1.6,
         maxWidth: '280px',
         margin: 0,
     },
     meseroAsignado: {
         padding: '12px 24px',
-        backgroundColor: '#1a1a26',
+        backgroundColor: 'var(--cliente-chip)',
         borderRadius: '12px',
-        border: '1px solid #2a2a3d',
+        border: '1px solid var(--border-default)',
         textAlign: 'center',
     },
     meseroLabel: {
         fontSize: '11px',
-        color: '#606080',
+        color: 'var(--text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
         margin: '0 0 4px 0',
@@ -935,7 +950,7 @@ const styles = {
     meseroNombre: {
         fontSize: '16px',
         fontWeight: '600',
-        color: '#f0f0ff',
+        color: 'var(--text-primary)',
         margin: 0,
     },
     progreso: {
@@ -978,9 +993,9 @@ const styles = {
     },
     pedidoResumen: {
         width: '100%',
-        backgroundColor: '#111118',
+        backgroundColor: 'var(--cliente-card)',
         borderRadius: '12px',
-        border: '1px solid #1e1e2e',
+        border: '1px solid var(--border-subtle)',
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
@@ -989,7 +1004,7 @@ const styles = {
     },
     pedidoResumenTitulo: {
         fontSize: '13px',
-        color: '#606080',
+        color: 'var(--text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.5px',
         margin: '0 0 4px 0',
@@ -1001,22 +1016,22 @@ const styles = {
     },
     pedidoResumenNombre: {
         fontSize: '13px',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
     },
     pedidoResumenSubtotal: {
         fontSize: '13px',
-        color: '#606080',
+        color: 'var(--text-muted)',
     },
     pedidoResumenTotal: {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        borderTop: '1px solid #1e1e2e',
+        borderTop: '1px solid var(--border-subtle)',
         paddingTop: '8px',
         marginTop: '4px',
         fontSize: '15px',
         fontWeight: '600',
-        color: '#a0a0c0',
+        color: 'var(--text-secondary)',
     },
     pollingInfo: {
         display: 'flex',
@@ -1025,6 +1040,6 @@ const styles = {
     },
     pollingTxt: {
         fontSize: '11px',
-        color: '#404060',
+        color: 'var(--text-disabled)',
     },
 };

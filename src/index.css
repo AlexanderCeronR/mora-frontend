@@ -122,6 +122,12 @@
   --btn3d-edge:   #1b1347;
   --btn3d-shine:  rgba(255,255,255,0.45);
   --btn3d-shadow: rgba(68,49,153,0.55);
+
+  --cliente-card:   #111118;
+  --cliente-chip:   #1a1a26;
+  --cliente-price:  #C13383;
+  --cliente-brand:  linear-gradient(135deg, #443199, #792CA2);
+  --cliente-onbrand: #ffffff;
 }
 
 /* =====================
@@ -298,6 +304,12 @@ body {
   --btn3d-edge:   #000000;
   --btn3d-shine:  rgba(255,255,255,0.35);
   --btn3d-shadow: rgba(0,0,0,0.45);
+
+  --cliente-card:   #ffffff;
+  --cliente-chip:   #f5f5f5;
+  --cliente-price:  #000000;
+  --cliente-brand:  #000000;
+  --cliente-onbrand: #ffffff;
 }
 
 [data-theme="light"] ::selection {
